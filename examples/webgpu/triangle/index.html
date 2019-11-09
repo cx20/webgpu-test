@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Testing Triangle Using WebGPU</title>
+  <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+<body>
+<script src="../../../libs/glslang.js"></script>
+<script id="vs" type="x-shader/x-vertex">
+#version 450
+layout(location = 0) in vec3 position;
+void main() {
+    gl_Position = vec4(position, 1.0);
+}
+</script>
+
+<script id="fs" type="x-shader/x-fragment">
+#version 450
+layout(location = 0) out vec4 outColor;
+void main() {
+    outColor = vec4(0.0, 0.0, 1.0, 1.0);
+}
+</script>
+<canvas id="c" width="465" height="465"></canvas>
+<script src="index.js"></script>
+</body>
+</html>
