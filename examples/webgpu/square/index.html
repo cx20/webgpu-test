@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Testing Squaree Using WebGPU</title>
+  <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+<body>
+<script src="../../../libs/glslang.js"></script>
+<script id="vs" type="x-shader/x-vertex">
+#version 450
+layout(location = 0) in vec3 position;
+layout(location = 1) in vec4 color;
+layout(location = 0) out vec4 vColor;
+void main() {
+    vColor = color;
+    gl_Position = vec4(position, 1.0);
+}
+</script>
+
+<script id="fs" type="x-shader/x-fragment">
+#version 450
+layout(location = 0) in vec4 vColor;
+layout(location = 0) out vec4 outColor;
+void main() {
+    outColor = vColor;
+}
+</script>
+<canvas id="c" width="465" height="465"></canvas>
+<script src="index.js"></script>
+</body>
+</html>
