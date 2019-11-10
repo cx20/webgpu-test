@@ -14,14 +14,24 @@ var createScene = function(engine) {
     return scene;
 }
 
-var canvas = document.querySelector("#renderCanvas");
-var engine = new BABYLON.Engine(canvas, true);
-var scene = createScene(engine);
+async function init() {
+    try {
+        var canvas = document.querySelector("#renderCanvas");
+        var engine = new BABYLON.WebGPUEngine(canvas);
+        await engine.initAsync();
+        var scene = createScene(engine);
 
-engine.runRenderLoop(function () {
-    scene.render();
-});
+        engine.runRenderLoop(function () {
+            scene.render();
+        });
 
-window.addEventListener('resize', function(){
-    engine.resize();
-});
+        window.addEventListener('resize', function(){
+            engine.resize();
+        });
+    }
+    catch (e) {
+        console.error(e);
+    }
+}
+
+init();
