@@ -139,11 +139,13 @@ async function init(glslang) {
             frontFace : "ccw",
             cullMode : 'none'
         },
+/*
         depthStencilState: {
             depthWriteEnabled: true,
             depthCompare: "less",
             format: "depth24plus-stencil8",
         }
+*/
     });
 
     const uniformBufferSize = 4 * 16; // 4x4 matrix
