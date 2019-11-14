@@ -36,12 +36,19 @@ async function init(glslang) {
     //        [2]------[3]
     //
     let positions = [ 
-        -0.5, 0.5, 0.0,   1.0, 0.0, 0.0, 1.0, // v0
-         0.5, 0.5, 0.0,   0.0, 1.0, 0.0, 1.0, // v1
-        -0.5,-0.5, 0.0,   0.0, 0.0, 1.0, 1.0, // v2
-         0.5,-0.5, 0.0,   1.0, 1.0, 0.0, 1.0  // v3
+        -0.5, 0.5, 0.0, // v0
+         0.5, 0.5, 0.0, // v1
+        -0.5,-0.5, 0.0, // v2
+         0.5,-0.5, 0.0  // v3
+    ];
+    let colors = [ 
+        1.0, 0.0, 0.0, 1.0, // v0
+        0.0, 1.0, 0.0, 1.0, // v1
+        0.0, 0.0, 1.0, 1.0, // v2
+        1.0, 1.0, 0.0, 1.0  // v3
     ];
     let vertexBuffer = makeVertexBuffer(device, new Float32Array(positions));
+    let colorBuffer = makeVertexBuffer(device, new Float32Array(colors));
 
     const pipeline = device.createRenderPipeline({
         layout: device.createPipelineLayout({bindGroupLayouts: []}),
@@ -57,7 +64,7 @@ async function init(glslang) {
             indexFormat: 'uint32',
             vertexBuffers: [
                 {
-                    arrayStride: (3 + 4) * 4,
+                    arrayStride: 3 * 4,
                     attributes: [
                         {
                             // position
@@ -65,10 +72,15 @@ async function init(glslang) {
                             offset: 0,
                             format: "float3"
                         },
+                    ]
+                },
+                {
+                    arrayStride: 4 * 4,
+                    attributes: [
                         {
                             // color
                             shaderLocation: 1,
-                            offset:  3 * 4,
+                            offset:  0,
                             format: "float4"
                         }
                     ]
@@ -101,6 +113,7 @@ async function init(glslang) {
         };
         const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
         passEncoder.setVertexBuffer(0, vertexBuffer);
+        passEncoder.setVertexBuffer(1, colorBuffer);
         passEncoder.setPipeline(pipeline);
         passEncoder.draw(4, 1, 0, 0);
         passEncoder.endPass();
