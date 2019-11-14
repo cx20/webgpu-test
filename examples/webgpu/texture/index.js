@@ -41,39 +41,76 @@ async function init(glslang) {
     //       |/       |/
     //      [0]------[1]
     //
-    let positions = [ 
+    const positions = [ 
         // Front face
-        -0.5, -0.5,  0.5,   0.0, 0.0, // v0
-         0.5, -0.5,  0.5,   1.0, 0.0, // v1
-         0.5,  0.5,  0.5,   1.0, 1.0, // v2
-        -0.5,  0.5,  0.5,   0.0, 1.0, // v3
+        -0.5, -0.5,  0.5, // v0
+         0.5, -0.5,  0.5, // v1
+         0.5,  0.5,  0.5, // v2
+        -0.5,  0.5,  0.5, // v3
         // Back face
-        -0.5, -0.5, -0.5,   1.0, 0.0, // v4
-         0.5, -0.5, -0.5,   1.0, 1.0, // v5
-         0.5,  0.5, -0.5,   0.0, 1.0, // v6
-        -0.5,  0.5, -0.5,   0.0, 0.0, // v7
+        -0.5, -0.5, -0.5, // v4
+         0.5, -0.5, -0.5, // v5
+         0.5,  0.5, -0.5, // v6
+        -0.5,  0.5, -0.5, // v7
         // Top face
-         0.5,  0.5,  0.5,   0.0, 1.0, // v2
-        -0.5,  0.5,  0.5,   0.0, 0.0, // v3
-        -0.5,  0.5, -0.5,   1.0, 0.0, // v7
-         0.5,  0.5, -0.5,   1.0, 1.0, // v6
+         0.5,  0.5,  0.5, // v2
+        -0.5,  0.5,  0.5, // v3
+        -0.5,  0.5, -0.5, // v7
+         0.5,  0.5, -0.5, // v6
         // Bottom face
-        -0.5, -0.5,  0.5,   1.0, 1.0, // v0
-         0.5, -0.5,  0.5,   0.0, 1.0, // v1
-         0.5, -0.5, -0.5,   0.0, 0.0, // v5
-        -0.5, -0.5, -0.5,   1.0, 0.0, // v4
+        -0.5, -0.5,  0.5, // v0
+         0.5, -0.5,  0.5, // v1
+         0.5, -0.5, -0.5, // v5
+        -0.5, -0.5, -0.5, // v4
          // Right face
-         0.5, -0.5,  0.5,   1.0, 0.0, // v1
-         0.5,  0.5,  0.5,   1.0, 1.0, // v2
-         0.5,  0.5, -0.5,   0.0, 1.0, // v6
-         0.5, -0.5, -0.5,   0.0, 0.0, // v5
+         0.5, -0.5,  0.5, // v1
+         0.5,  0.5,  0.5, // v2
+         0.5,  0.5, -0.5, // v6
+         0.5, -0.5, -0.5, // v5
          // Left face
-        -0.5, -0.5,  0.5,   0.0, 0.0, // v0
-        -0.5,  0.5,  0.5,   1.0, 0.0, // v3
-        -0.5,  0.5, -0.5,   1.0, 1.0, // v7
-        -0.5, -0.5, -0.5,   0.0, 1.0  // v4
+        -0.5, -0.5,  0.5, // v0
+        -0.5,  0.5,  0.5, // v3
+        -0.5,  0.5, -0.5, // v7
+        -0.5, -0.5, -0.5  // v4
     ];
-    let indices = [
+    const textureCoords = [
+        // Front face
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0,
+
+        // Back face
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0,
+        0.0, 0.0,
+
+        // Top face
+        0.0, 1.0,
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+
+        // Bottom face
+        1.0, 1.0,
+        0.0, 1.0,
+        0.0, 0.0,
+        1.0, 0.0,
+
+        // Right face
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0,
+        0.0, 0.0,
+
+        // Left face
+        0.0, 0.0,
+        1.0, 0.0,
+        1.0, 1.0,
+        0.0, 1.0,
+    ];
+    const indices = [
          0,  1,  2,    0,  2 , 3,  // Front face
          4,  5,  6,    4,  6 , 7,  // Back face
          8,  9, 10,    8, 10, 11,  // Top face
@@ -82,6 +119,7 @@ async function init(glslang) {
         20, 21, 22,   20, 22, 23   // Left face
     ];
     let vertexBuffer = makeVertexBuffer(device, new Float32Array(positions));
+    let coordBuffer = makeVertexBuffer(device, new Float32Array(textureCoords));
     let indexBuffer = makeIndexBuffer(device, new Uint32Array(indices));
 
     const uniformsBindGroupLayout = device.createBindGroupLayout({
@@ -116,18 +154,23 @@ async function init(glslang) {
             indexFormat: 'uint32',
             vertexBuffers: [
                 {
-                    arrayStride: (3 + 2) * 4,
+                    arrayStride: 3 * 4,
                     attributes: [
                         {
                             // position
                             shaderLocation: 0,
                             offset: 0,
                             format: "float3"
-                        },
+                        }
+                    ]
+                },
+                {
+                    arrayStride: 2 * 4,
+                    attributes: [
                         {
                             // textureCoord
                             shaderLocation: 1,
-                            offset:  3 * 4,
+                            offset:  0,
                             format: "float2"
                         }
                     ]
@@ -232,6 +275,7 @@ async function init(glslang) {
         const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
         passEncoder.setPipeline(pipeline);
         passEncoder.setVertexBuffer(0, vertexBuffer);
+        passEncoder.setVertexBuffer(1, coordBuffer);
         passEncoder.setIndexBuffer(indexBuffer);
         passEncoder.setBindGroup(0, uniformBindGroup);
         passEncoder.drawIndexed(indexBuffer.pointNum, 1, 0, 0, 0);
