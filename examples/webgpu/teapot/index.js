@@ -24,6 +24,7 @@ async function init(glslang) {
     let fShaderModule = makeShaderModule_GLSL(glslang, device, 'fragment', fragmentShaderGLSL);
 
     let vertexBuffer;
+    let normalBuffer;
     let coordBuffer;
     let indexBuffer;
 
@@ -70,11 +71,22 @@ async function init(glslang) {
                     ]
                 },
                 {
+                    arrayStride: 3 * 4,
+                    attributes: [
+                        {
+                            // normal
+                            shaderLocation: 1,
+                            offset: 0,
+                            format: "float3"
+                        }
+                    ]
+                },
+                {
                     arrayStride: 2 * 4,
                     attributes: [
                         {
                             // textureCoord
-                            shaderLocation: 1,
+                            shaderLocation: 2,
                             offset:  0,
                             format: "float2"
                         }
@@ -183,7 +195,8 @@ async function init(glslang) {
         const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
         passEncoder.setPipeline(pipeline);
         passEncoder.setVertexBuffer(0, vertexBuffer);
-        passEncoder.setVertexBuffer(1, coordBuffer);
+        passEncoder.setVertexBuffer(1, normalBuffer);
+        passEncoder.setVertexBuffer(2, coordBuffer);
         passEncoder.setIndexBuffer(indexBuffer);
         passEncoder.setBindGroup(0, uniformBindGroup);
         passEncoder.drawIndexed(indexBuffer.pointNum, 1, 0, 0, 0);
@@ -195,6 +208,7 @@ async function init(glslang) {
 	// copy from: https://github.com/gpjt/webgl-lessons/blob/master/lesson14/Teapot.json
 	$.getJSON("../../../assets/json/teapot.json", function (data) {
 		vertexBuffer = makeVertexBuffer(device, new Float32Array(data.vertexPositions));
+		normalBuffer = makeVertexBuffer(device, new Float32Array(data.vertexNormals));
 		coordBuffer = makeVertexBuffer(device, new Float32Array(data.vertexTextureCoords));
 		indexBuffer = makeIndexBuffer(device, new Uint32Array(data.indices));
 
