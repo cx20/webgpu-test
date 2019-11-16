@@ -31,7 +31,7 @@ async function init(glslang) {
     const uniformsBindGroupLayout = device.createBindGroupLayout({
         bindings: [{
             binding: 0,
-            visibility: 1,
+            visibility: GPUShaderStage.VERTEX,
             type: "uniform-buffer"
         }, {
           // Sampler
