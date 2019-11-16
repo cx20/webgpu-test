@@ -34,15 +34,20 @@ async function init(glslang) {
             visibility: GPUShaderStage.VERTEX,
             type: "uniform-buffer"
         }, {
-          // Sampler
-          binding: 1,
-          visibility: GPUShaderStage.FRAGMENT,
-          type: "sampler"
+            // Sampler
+            binding: 1,
+            visibility: GPUShaderStage.FRAGMENT,
+            type: "sampler"
         }, {
-          // Texture view
-          binding: 2,
-          visibility: GPUShaderStage.FRAGMENT,
-          type: "sampled-texture"
+            // Texture view
+            binding: 2,
+            visibility: GPUShaderStage.FRAGMENT,
+            type: "sampled-texture"
+        }, {
+            // Lighting
+            binding: 3,
+            visibility: GPUShaderStage.FRAGMENT,
+            type: "uniform-buffer"
         }]
     });
     const pipelineLayout = device.createPipelineLayout({ bindGroupLayouts: [uniformsBindGroupLayout] });
@@ -117,20 +122,25 @@ async function init(glslang) {
     });
 
     const uniformBufferSize = 4 * 16; // 4x4 matrix
-
     const uniformBuffer = device.createBuffer({
         size: uniformBufferSize,
         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
-    // copy from: https://github.com/gpjt/webgl-lessons/blob/master/lesson14/arroway.de_metal%2Bstructure%2B06_d100_flat.jpg
-    const cubeTexture = await createTextureFromImage(device, "../../../assets/textures/arroway.de_metal+structure+06_d100_flat.jpg", GPUTextureUsage.SAMPLED);
-    
     const sampler = device.createSampler({
         magFilter: "linear",
         minFilter: "linear",
         addressModeU: "repeat",
         addressModeV: "repeat",
+    });
+
+    // copy from: https://github.com/gpjt/webgl-lessons/blob/master/lesson14/arroway.de_metal%2Bstructure%2B06_d100_flat.jpg
+    const cubeTexture = await createTextureFromImage(device, "../../../assets/textures/arroway.de_metal+structure+06_d100_flat.jpg", GPUTextureUsage.SAMPLED);
+    
+    const uniformLightBufferSize = 4 * 3; // 4 x vec3
+    const uniformLightBuffer = device.createBuffer({
+        size: uniformLightBufferSize,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
     const uniformBindGroup = device.createBindGroup({
@@ -146,6 +156,11 @@ async function init(glslang) {
         }, {
             binding: 2,
             resource: cubeTexture.createView(),
+        }, {
+            binding: 3,
+            resource: {
+                buffer: uniformLightBuffer,
+            } 
         }],
     });
     
@@ -177,6 +192,7 @@ async function init(glslang) {
     let render =  function () {
 
         uniformBuffer.setSubData(0, getTransformationMatrix());
+        uniformLightBuffer.setSubData(0, new Float32Array([100.0, 0.0, 100.0]));
         const commandEncoder = device.createCommandEncoder();
         const textureView = swapChain.getCurrentTexture().createView();
         const renderPassDescriptor = {
@@ -205,15 +221,15 @@ async function init(glslang) {
         requestAnimationFrame(render);
     }
 
-	// copy from: https://github.com/gpjt/webgl-lessons/blob/master/lesson14/Teapot.json
-	$.getJSON("../../../assets/json/teapot.json", function (data) {
-		vertexBuffer = makeVertexBuffer(device, new Float32Array(data.vertexPositions));
-		normalBuffer = makeVertexBuffer(device, new Float32Array(data.vertexNormals));
-		coordBuffer = makeVertexBuffer(device, new Float32Array(data.vertexTextureCoords));
-		indexBuffer = makeIndexBuffer(device, new Uint32Array(data.indices));
+    // copy from: https://github.com/gpjt/webgl-lessons/blob/master/lesson14/Teapot.json
+    $.getJSON("../../../assets/json/teapot.json", function (data) {
+        vertexBuffer = makeVertexBuffer(device, new Float32Array(data.vertexPositions));
+        normalBuffer = makeVertexBuffer(device, new Float32Array(data.vertexNormals));
+        coordBuffer = makeVertexBuffer(device, new Float32Array(data.vertexTextureCoords));
+        indexBuffer = makeIndexBuffer(device, new Uint32Array(data.indices));
 
-	    requestAnimationFrame(render)
-	});
+        requestAnimationFrame(render)
+    });
 }
 
 function configureSwapChain(device, swapChainFormat, context) {

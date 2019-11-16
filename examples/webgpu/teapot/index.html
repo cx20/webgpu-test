@@ -32,13 +32,16 @@ void main() {
 #version 450
 layout(set = 0, binding = 1) uniform sampler mySampler;
 layout(set = 0, binding = 2) uniform texture2D myTexture;
+layout(set = 0, binding = 3) uniform Uniforms {
+    vec3 pointLightingLocation;
+} uniforms;
 layout(location = 0) in vec4 vPosition;
 layout(location = 1) in vec3 vNormal;
 layout(location = 2) in vec2 vTextureCoord;
 layout(location = 0) out vec4 outColor;
 void main() {
-    vec3 uPointLightingLocation = vec3(100.0, 0.0, 100.0);
-    vec3 lightDirection = normalize(uPointLightingLocation - vPosition.xyz);
+    //vec3 uPointLightingLocation = vec3(100.0, 0.0, 100.0);
+    vec3 lightDirection = normalize(uniforms.pointLightingLocation - vPosition.xyz);
     vec3 normal = normalize(vNormal);
     float lightWeighting = max(dot(normal, lightDirection), 0.0);
     vec4 fragmentColor  = texture(sampler2D(myTexture, mySampler), vTextureCoord);
