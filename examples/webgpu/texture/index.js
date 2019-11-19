@@ -280,7 +280,7 @@ async function init(glslang) {
         passEncoder.setBindGroup(0, uniformBindGroup);
         passEncoder.drawIndexed(indexBuffer.pointNum, 1, 0, 0, 0);
         passEncoder.endPass();
-        device.getQueue().submit([commandEncoder.finish()]);
+        device.defaultQueue.submit([commandEncoder.finish()]);
         requestAnimationFrame(render);
     }
     requestAnimationFrame(render)
@@ -386,7 +386,7 @@ async function createTextureFromImage(device, src, usage) {
         depth: 1,
     });
 
-    device.getQueue().submit([commandEncoder.finish()]);
+    device.defaultQueue.submit([commandEncoder.finish()]);
 
     return texture;
 }
