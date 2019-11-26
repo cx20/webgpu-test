@@ -40,9 +40,10 @@ import RedObitController from "https://rawcdn.githack.com/redcamel/RedGPU/98de8c
 
             let interleaveData = new Float32Array(
                 [
-                     0.0,  0.5, 0.0,   0.0, 0.0,-1.0,   0.0, 0.0,
-                    -0.5, -0.5, 0.0,   0.0, 0.0,-1.0,   0.0, 0.0,
-                     0.5, -0.5, 0.0,   0.0,-0.0,-1.0,   0.0, 0.0
+                    // TODO: Except for vertex position, it is unused but remains because it will not work if removed
+                     0.0,  0.5, 0.0,   0.0, 0.0, 0.0,   0.0, 0.0,
+                    -0.5, -0.5, 0.0,   0.0, 0.0, 0.0,   0.0, 0.0,
+                     0.5, -0.5, 0.0,   0.0,-0.0, 0.0,   0.0, 0.0
                 ]
             );
             let indexData = new Uint16Array(
@@ -59,6 +60,7 @@ import RedObitController from "https://rawcdn.githack.com/redcamel/RedGPU/98de8c
                     RedBuffer.TYPE_VERTEX,
                     new Float32Array(interleaveData),
                     [
+                        // TODO: Except for vertex position, it is unused but remains because it will not work if removed
                         new RedInterleaveInfo('vertexPosition', 'float3'),
                         new RedInterleaveInfo('vertexNormal', 'float3'),
                         new RedInterleaveInfo('texcoord', 'float2')
