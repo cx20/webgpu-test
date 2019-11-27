@@ -13,16 +13,6 @@ import RedObitController from "https://rawcdn.githack.com/redcamel/RedGPU/98de8c
 
 (async function () {
     const c = document.getElementById('canvas');
-    resizeCanvas();
-    window.addEventListener("resize", function(){
-        resizeCanvas();
-    });
-
-    function resizeCanvas() {
-        c.width = window.innerWidth;
-        c.height = window.innerHeight;
-    }
-
     const glslangModule = await import(/* webpackIgnore: true */ 'https://unpkg.com/@webgpu/glslang@0.0.9/dist/web-devel/glslang.js');
 
     const glslang = await glslangModule.default();
@@ -30,13 +20,16 @@ import RedObitController from "https://rawcdn.githack.com/redcamel/RedGPU/98de8c
         function () {
 
             let tScene = new RedScene();
-            let tCamera = new RedObitController(this)
+            tScene.backgroundColor = '#fff';
+            
+            let tCamera = new RedObitController(this);
 
-            let tView = new RedView(this, tScene, tCamera)
-            tCamera.targetView = tView // optional
-            tCamera.distance = 2
+            let tView = new RedView(this, tScene, tCamera);
+            tCamera.targetView = tView; // optional
+            tCamera.distance = 2;
 
             redGPU.view = tView
+            redGPU.setSize(window.innerWidth, window.innerHeight);
 
             let interleaveData = new Float32Array(
                 [
