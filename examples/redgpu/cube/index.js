@@ -159,8 +159,8 @@ class VertexColorMaterial extends RedBaseMaterial {
                     new Uint32Array(indexData)
                 )
             );
-            let colroMat = new VertexColorMaterial(redGPU);
-            let tMesh = new RedMesh(redGPU, geometry, colroMat);
+            let colorMat = new VertexColorMaterial(redGPU);
+            let tMesh = new RedMesh(redGPU, geometry, colorMat);
             tMesh.cullMode = 'none';
             tScene.addChild(tMesh);
 
