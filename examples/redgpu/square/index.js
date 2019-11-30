@@ -1,5 +1,3 @@
-const BASE_URL = "https://rawcdn.githack.com/redcamel/RedGPU/98de8c12d1f59dd7b50b14b4c8f9fc8399fa8c66/";
-
 import RedGPU from "https://rawcdn.githack.com/redcamel/RedGPU/8dfcd2029c13b885b0ac52080d5541daf9c4189d/src/RedGPU.js";
 import RedBuffer from "https://rawcdn.githack.com/redcamel/RedGPU/8dfcd2029c13b885b0ac52080d5541daf9c4189d/src/buffer/RedBuffer.js";
 import RedGeometry from "https://rawcdn.githack.com/redcamel/RedGPU/8dfcd2029c13b885b0ac52080d5541daf9c4189d/src/geometry/RedGeometry.js";
