@@ -1,17 +1,13 @@
 import {
-    BoxBufferGeometry,
-    BufferAttribute,
     Camera,
     Mesh,
     MeshBasicMaterial,
-    Shape,
-    ShapeGeometry,
-    BoxGeometry,
+    BufferGeometry,
+    BufferAttribute,
     PerspectiveCamera,
     Scene,
     Texture,
-    TextureLoader,
-    VertexColors
+    TextureLoader
 } from 'https://raw.githack.com/mrdoob/three.js/r111/build/three.module.js';
 import WebGPURenderer from 'https://rawcdn.githack.com/takahirox/THREE.WebGPURenderer/44d91fcc5ce2f92d71f1811d36f59b5a6510753e/src/renderers/WebGPURenderer.js';
 import glslangModule from 'https://rawcdn.githack.com/takahirox/THREE.WebGPURenderer/44d91fcc5ce2f92d71f1811d36f59b5a6510753e/examples/jsm/libs/glslang.js';
@@ -34,38 +30,67 @@ const run = async () => {
     const camera = new PerspectiveCamera(30, window.innerWidth / window.innerHeight, 0.1, 1000.0);
     camera.position.z = 5.0;
 
-/*
-    let box;
-
-    new TextureLoader().load('../../../assets/textures/frog.jpg', texture => {
-        box = new Mesh(
-            new BoxBufferGeometry(1, 1, 1),
-            new MeshBasicMaterial({
-                map: texture
-            })
-        );
-        box.rotation.x = 45 * Math.PI / 180;
-        scene.add(box);
-
-    });
-*/
-    var geometry = new BoxBufferGeometry(1, 1, 1);
-/*
-    var vertexColors = [
-        [1.0, 0.0, 0.0, 1.0], // Front face
-        [1.0, 1.0, 0.0, 1.0], // Back face
-        [0.0, 1.0, 0.0, 1.0], // Top face
-        [1.0, 0.5, 0.5, 1.0], // Bottom face
-        [1.0, 0.0, 1.0, 1.0], // Right face
-        [0.0, 0.0, 1.0, 1.0], // Left face
+    let material = new MeshBasicMaterial({ color: 0x0000ff });
+    //let material = new MeshBasicMaterial({vertexColors: VertexColors}); // TODO: VertexColors not yet supported
+    
+    // Cube data
+    //             1.0 y 
+    //              ^  -1.0 
+    //              | / z
+    //              |/       x
+    // -1.0 -----------------> +1.0
+    //            / |
+    //      +1.0 /  |
+    //           -1.0
+    // 
+    //         [7]------[6]
+    //        / |      / |
+    //      [3]------[2] |
+    //       |  |     |  |
+    //       | [4]----|-[5]
+    //       |/       |/
+    //      [0]------[1]
+    //
+    let vertexPositions = [
+            // Front face
+            [-0.5, -0.5,  0.5], // v0
+            [ 0.5, -0.5,  0.5], // v1
+            [ 0.5,  0.5,  0.5], // v2
+            [-0.5,  0.5,  0.5], // v3
+            // Back face
+            [-0.5, -0.5, -0.5], // v4
+            [ 0.5, -0.5, -0.5], // v5
+            [ 0.5,  0.5, -0.5], // v6
+            [-0.5,  0.5, -0.5], // v7
+            // Top face
+            [ 0.5,  0.5,  0.5], // v2
+            [-0.5,  0.5,  0.5], // v3
+            [-0.5,  0.5, -0.5], // v7
+            [ 0.5,  0.5, -0.5], // v6
+            // Bottom face
+            [-0.5, -0.5,  0.5], // v0
+            [ 0.5, -0.5,  0.5], // v1
+            [ 0.5, -0.5, -0.5], // v5
+            [-0.5, -0.5, -0.5], // v4
+            // Right face
+            [ 0.5, -0.5,  0.5], // v1
+            [ 0.5,  0.5,  0.5], // v2
+            [ 0.5,  0.5, -0.5], // v6
+            [ 0.5, -0.5, -0.5], // v5
+            // Left face
+            [-0.5, -0.5,  0.5], // v0
+            [-0.5,  0.5,  0.5], // v3
+            [-0.5,  0.5, -0.5], // v7
+            [-0.5, -0.5, -0.5]  // v4
     ];
-    for ( var i = 0; i < geometry.faces.length; i += 2 ) {
-        var rgb = vertexColors[i/2];
-        geometry.faces[ i + 0 ].color.setRGB( rgb[0], rgb[1], rgb[2] );
-        geometry.faces[ i + 1 ].color.setRGB( rgb[0], rgb[1], rgb[2] );
+    let vertices = new Float32Array(vertexPositions.length * 3);
+    for (let i = 0; i < vertexPositions.length; i++) {
+        vertices[i * 3 + 0] = vertexPositions[i][0];
+        vertices[i * 3 + 1] = vertexPositions[i][1];
+        vertices[i * 3 + 2] = vertexPositions[i][2];
     }
-*/
-    var vertexColors = [
+
+    let vertexColors = [
             [1.0, 0.0, 0.0, 1.0], // Front face
             [1.0, 0.0, 0.0, 1.0], // Front face
             [1.0, 0.0, 0.0, 1.0], // Front face
@@ -91,24 +116,38 @@ const run = async () => {
             [0.0, 0.0, 1.0, 1.0], // Left face
             [0.0, 0.0, 1.0, 1.0]  // Left face
     ];
-    var colors = new Float32Array(vertexColors.length * 4);
-    for (var i = 0; i < vertexColors.length; i++) {
+    let colors = new Float32Array(vertexColors.length * 4);
+    for (let i = 0; i < vertexColors.length; i++) {
         colors[i * 4 + 0] = vertexColors[i][0];
         colors[i * 4 + 1] = vertexColors[i][1];
         colors[i * 4 + 2] = vertexColors[i][2];
         colors[i * 4 + 3] = vertexColors[i][3];
     }
-    //geometry.setAttribute('color', new BufferAttribute(colors, 4));
-    var material = new MeshBasicMaterial();
-    var mesh = new Mesh(geometry, material);
-    scene.add(mesh);
+    
+    let indices = new Uint16Array([
+         0,  1,  2,    0,  2 , 3,  // Front face
+         4,  5,  6,    4,  6 , 7,  // Back face
+         8,  9, 10,    8, 10, 11,  // Top face
+        12, 13, 14,   12, 14, 15,  // Bottom face
+        16, 17, 18,   16, 18, 19,  // Right face
+        20, 21, 22,   20, 22, 23   // Left face
+    ]);
+    
+    let geometry = new BufferGeometry();
+    geometry.addAttribute('position', new BufferAttribute(vertices, 3));
+    geometry.addAttribute('normal', new BufferAttribute(vertices, 3)); // TODO:
+    geometry.addAttribute('color', new BufferAttribute(colors, 4)); // TODO:
+    geometry.setIndex(new BufferAttribute(indices, 1));
+    
+    var box = new Mesh(geometry, material);
+    scene.add(box);
 
     const render = () => {
         requestAnimationFrame(render);
-        //if (box) {
-        //    box.rotation.x += 0.01;
-        //    box.rotation.y += 0.01;
-        //}
+        if (box) {
+            box.rotation.x += 0.01;
+            box.rotation.y += 0.01;
+        }
         renderer.render(scene, camera);
     };
 
