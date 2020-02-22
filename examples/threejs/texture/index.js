@@ -30,15 +30,11 @@ const run = async () => {
     camera.position.z = 5.0;
 
     let box;
-
-    new TextureLoader().load('../../../assets/textures/frog.jpg', texture => {
-        box = new Mesh(
-            new BoxBufferGeometry(1, 1, 1),
-            new MeshBasicMaterial({
-                map: texture
-            })
-        );
-        box.rotation.x = 45 * Math.PI / 180;
+    const loader = new TextureLoader();
+    loader.load('../../../assets/textures/frog.jpg', texture => {
+        const geometry = new BoxBufferGeometry(1, 1, 1);
+        const material = new MeshBasicMaterial({map: texture});
+        box = new Mesh(geometry, material);
         scene.add(box);
 
     });

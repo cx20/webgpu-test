@@ -1,20 +1,12 @@
 import {
-    BoxBufferGeometry,
     Camera,
     Mesh,
     MeshBasicMaterial,
-    MeshStandardMaterial,
-    Shape,
-    ShapeGeometry,
     BufferGeometry,
     BufferAttribute,
     PerspectiveCamera,
-    Color,
-    VertexColors,
     PlaneGeometry,
-    Scene,
-    Texture,
-    TextureLoader
+    Scene
 } from 'https://raw.githack.com/mrdoob/three.js/r111/build/three.module.js';
 import WebGPURenderer from 'https://rawcdn.githack.com/takahirox/THREE.WebGPURenderer/44d91fcc5ce2f92d71f1811d36f59b5a6510753e/src/renderers/WebGPURenderer.js';
 import glslangModule from 'https://rawcdn.githack.com/takahirox/THREE.WebGPURenderer/44d91fcc5ce2f92d71f1811d36f59b5a6510753e/examples/jsm/libs/glslang.js';
@@ -56,45 +48,47 @@ const run = async () => {
     //         |  /     |
     //        [2]------[3]
     //
-    var vertexPositions = [
+    const vertexPositions = [
         [-0.5, 0.5, 0.0], // v0
         [ 0.5, 0.5, 0.0], // v1 
         [-0.5,-0.5, 0.0], // v2
         [ 0.5,-0.5, 0.0]  // v3
     ];
-    var vertices = new Float32Array(vertexPositions.length * 3);
-    for (var i = 0; i < vertexPositions.length; i++) {
+
+    const vertices = new Float32Array(vertexPositions.length * 3);
+    for (let i = 0; i < vertexPositions.length; i++) {
         vertices[i * 3 + 0] = vertexPositions[i][0];
         vertices[i * 3 + 1] = vertexPositions[i][1];
         vertices[i * 3 + 2] = vertexPositions[i][2];
     }
 
-    var vertexColors = [
+    const vertexColors = [
         [1.0, 0.0, 0.0, 1.0], // v0
         [0.0, 1.0, 0.0, 1.0], // v1
         [0.0, 0.0, 1.0, 1.0], // v2
         [1.0, 1.0, 0.0, 1.0]  // v3
     ];
-    var colors = new Float32Array(vertexColors.length * 4);
-    for (var i = 0; i < vertexColors.length; i++) {
+
+    const colors = new Float32Array(vertexColors.length * 4);
+    for (let i = 0; i < vertexColors.length; i++) {
         colors[i * 4 + 0] = vertexColors[i][0];
         colors[i * 4 + 1] = vertexColors[i][1];
         colors[i * 4 + 2] = vertexColors[i][2];
         colors[i * 4 + 3] = vertexColors[i][3];
     }
     
-    var indices = new Uint16Array([
+    const indices = new Uint16Array([
         2, 0, 1, // v2-v0-v1
         2, 1, 3  // v2-v1-v3
     ]);
     
-    var geometry = new BufferGeometry();
+    const geometry = new BufferGeometry();
     geometry.setAttribute('position', new BufferAttribute(vertices, 3));
     geometry.setAttribute('normal', new BufferAttribute(vertices, 3));
     geometry.setAttribute('color', new BufferAttribute(colors, 4));
     geometry.setIndex(new BufferAttribute(indices, 1));
     
-    var mesh = new Mesh(geometry, material);
+    const mesh = new Mesh(geometry, material);
     scene.add(mesh);
 
     const render = () => {

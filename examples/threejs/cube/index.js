@@ -5,9 +5,7 @@ import {
     BufferGeometry,
     BufferAttribute,
     PerspectiveCamera,
-    Scene,
-    Texture,
-    TextureLoader
+    Scene
 } from 'https://raw.githack.com/mrdoob/three.js/r111/build/three.module.js';
 import WebGPURenderer from 'https://rawcdn.githack.com/takahirox/THREE.WebGPURenderer/44d91fcc5ce2f92d71f1811d36f59b5a6510753e/src/renderers/WebGPURenderer.js';
 import glslangModule from 'https://rawcdn.githack.com/takahirox/THREE.WebGPURenderer/44d91fcc5ce2f92d71f1811d36f59b5a6510753e/examples/jsm/libs/glslang.js';
@@ -51,7 +49,7 @@ const run = async () => {
     //       |/       |/
     //      [0]------[1]
     //
-    let vertexPositions = [
+    const vertexPositions = [
             // Front face
             [-0.5, -0.5,  0.5], // v0
             [ 0.5, -0.5,  0.5], // v1
@@ -83,14 +81,14 @@ const run = async () => {
             [-0.5,  0.5, -0.5], // v7
             [-0.5, -0.5, -0.5]  // v4
     ];
-    let vertices = new Float32Array(vertexPositions.length * 3);
+    const vertices = new Float32Array(vertexPositions.length * 3);
     for (let i = 0; i < vertexPositions.length; i++) {
         vertices[i * 3 + 0] = vertexPositions[i][0];
         vertices[i * 3 + 1] = vertexPositions[i][1];
         vertices[i * 3 + 2] = vertexPositions[i][2];
     }
 
-    let vertexColors = [
+    const vertexColors = [
             [1.0, 0.0, 0.0, 1.0], // Front face
             [1.0, 0.0, 0.0, 1.0], // Front face
             [1.0, 0.0, 0.0, 1.0], // Front face
@@ -116,7 +114,7 @@ const run = async () => {
             [0.0, 0.0, 1.0, 1.0], // Left face
             [0.0, 0.0, 1.0, 1.0]  // Left face
     ];
-    let colors = new Float32Array(vertexColors.length * 4);
+    const colors = new Float32Array(vertexColors.length * 4);
     for (let i = 0; i < vertexColors.length; i++) {
         colors[i * 4 + 0] = vertexColors[i][0];
         colors[i * 4 + 1] = vertexColors[i][1];
@@ -124,7 +122,7 @@ const run = async () => {
         colors[i * 4 + 3] = vertexColors[i][3];
     }
     
-    let indices = new Uint16Array([
+    const indices = new Uint16Array([
          0,  1,  2,    0,  2 , 3,  // Front face
          4,  5,  6,    4,  6 , 7,  // Back face
          8,  9, 10,    8, 10, 11,  // Top face
@@ -133,10 +131,10 @@ const run = async () => {
         20, 21, 22,   20, 22, 23   // Left face
     ]);
     
-    let geometry = new BufferGeometry();
-    geometry.addAttribute('position', new BufferAttribute(vertices, 3));
-    geometry.addAttribute('normal', new BufferAttribute(vertices, 3)); // TODO:
-    geometry.addAttribute('color', new BufferAttribute(colors, 4)); // TODO:
+    const geometry = new BufferGeometry();
+    geometry.setAttribute('position', new BufferAttribute(vertices, 3));
+    geometry.setAttribute('normal', new BufferAttribute(vertices, 3)); // TODO:
+    geometry.setAttribute('color', new BufferAttribute(colors, 4)); // TODO:
     geometry.setIndex(new BufferAttribute(indices, 1));
     
     var box = new Mesh(geometry, material);
