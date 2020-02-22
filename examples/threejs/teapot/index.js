@@ -2,6 +2,7 @@ import {
     Camera,
     Mesh,
     MeshBasicMaterial,
+    MeshStandardMaterial,
     BufferGeometry,
     BufferAttribute,
     PerspectiveCamera,
@@ -53,7 +54,9 @@ const run = async () => {
         texture.wrapS = RepeatWrapping;
         texture.wrapT = RepeatWrapping;
         //let material = new MeshLambertMaterial({map: texture}); // TODO: This material is not yet supported
-        let material = new MeshBasicMaterial({map: texture});
+        //let material = new MeshBasicMaterial({map: texture});
+        let material = new MeshStandardMaterial({map: texture});
+        MeshStandardMaterial
 
         mesh = new Mesh(geometry, material);
         scene.add(mesh);
