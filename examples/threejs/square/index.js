@@ -5,7 +5,6 @@ import {
     BufferGeometry,
     BufferAttribute,
     PerspectiveCamera,
-    PlaneGeometry,
     Scene
 } from 'https://raw.githack.com/mrdoob/three.js/r111/build/three.module.js';
 import WebGPURenderer from 'https://rawcdn.githack.com/takahirox/THREE.WebGPURenderer/44d91fcc5ce2f92d71f1811d36f59b5a6510753e/src/renderers/WebGPURenderer.js';
@@ -84,8 +83,8 @@ const run = async () => {
     
     const geometry = new BufferGeometry();
     geometry.setAttribute('position', new BufferAttribute(vertices, 3));
-    geometry.setAttribute('normal', new BufferAttribute(vertices, 3));
-    geometry.setAttribute('color', new BufferAttribute(colors, 4));
+    geometry.setAttribute('normal', new BufferAttribute(vertices, 3)); // TODO:
+    geometry.setAttribute('color', new BufferAttribute(colors, 4)); // TODO:
     geometry.setIndex(new BufferAttribute(indices, 1));
     
     const mesh = new Mesh(geometry, material);
