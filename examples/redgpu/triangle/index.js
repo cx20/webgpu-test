@@ -1,19 +1,20 @@
-import RedGPU from "https://rawcdn.githack.com/redcamel/RedGPU/bf834ebfcb98d98b4c77084f0bc18c6a2574b77b/src/RedGPU.js";
-import RedBuffer from "https://rawcdn.githack.com/redcamel/RedGPU/bf834ebfcb98d98b4c77084f0bc18c6a2574b77b/src/buffer/RedBuffer.js";
-import RedGeometry from "https://rawcdn.githack.com/redcamel/RedGPU/bf834ebfcb98d98b4c77084f0bc18c6a2574b77b/src/geometry/RedGeometry.js";
-import RedInterleaveInfo from "https://rawcdn.githack.com/redcamel/RedGPU/bf834ebfcb98d98b4c77084f0bc18c6a2574b77b/src/geometry/RedInterleaveInfo.js";
-import RedMesh from "https://rawcdn.githack.com/redcamel/RedGPU/bf834ebfcb98d98b4c77084f0bc18c6a2574b77b/src/object3D/RedMesh.js";
-import RedRender from "https://rawcdn.githack.com/redcamel/RedGPU/bf834ebfcb98d98b4c77084f0bc18c6a2574b77b/src/renderer/RedRender.js";
-import RedScene from "https://rawcdn.githack.com/redcamel/RedGPU/bf834ebfcb98d98b4c77084f0bc18c6a2574b77b/src/RedScene.js";
-import RedView from "https://rawcdn.githack.com/redcamel/RedGPU/bf834ebfcb98d98b4c77084f0bc18c6a2574b77b/src/RedView.js";
-import RedObitController from "https://rawcdn.githack.com/redcamel/RedGPU/bf834ebfcb98d98b4c77084f0bc18c6a2574b77b/src/controller/RedObitController.js";
-import RedBaseMaterial from "https://rawcdn.githack.com/redcamel/RedGPU/bf834ebfcb98d98b4c77084f0bc18c6a2574b77b/src/base/RedBaseMaterial.js";
-import RedShareGLSL from "https://rawcdn.githack.com/redcamel/RedGPU/bf834ebfcb98d98b4c77084f0bc18c6a2574b77b/src/base/RedShareGLSL.js";
+// import RedGPU from "https://rawcdn.githack.com/redcamel/RedGPU/68757c12396a9c37bd72f05139eb797e12fa1a98/src/RedGPU.js";
+// import RedBuffer from "https://rawcdn.githack.com/redcamel/RedGPU/68757c12396a9c37bd72f05139eb797e12fa1a98/src/buffer/RedBuffer.js";
+// import RedGeometry from "https://rawcdn.githack.com/redcamel/RedGPU/68757c12396a9c37bd72f05139eb797e12fa1a98/src/geometry/RedGeometry.js";
+// import RedInterleaveInfo from "https://rawcdn.githack.com/redcamel/RedGPU/68757c12396a9c37bd72f05139eb797e12fa1a98/src/geometry/RedInterleaveInfo.js";
+// import RedMesh from "https://rawcdn.githack.com/redcamel/RedGPU/68757c12396a9c37bd72f05139eb797e12fa1a98/src/object3D/RedMesh.js";
+// import RedRender from "https://rawcdn.githack.com/redcamel/RedGPU/68757c12396a9c37bd72f05139eb797e12fa1a98/src/renderer/RedRender.js";
+// import RedScene from "https://rawcdn.githack.com/redcamel/RedGPU/68757c12396a9c37bd72f05139eb797e12fa1a98/src/RedScene.js";
+// import RedView from "https://rawcdn.githack.com/redcamel/RedGPU/68757c12396a9c37bd72f05139eb797e12fa1a98/src/RedView.js";
+// import RedObitController from "https://rawcdn.githack.com/redcamel/RedGPU/68757c12396a9c37bd72f05139eb797e12fa1a98/src/controller/RedObitController.js";
+// import RedBaseMaterial from "https://rawcdn.githack.com/redcamel/RedGPU/68757c12396a9c37bd72f05139eb797e12fa1a98/src/base/RedBaseMaterial.js";
+// import RedShareGLSL from "https://rawcdn.githack.com/redcamel/RedGPU/68757c12396a9c37bd72f05139eb797e12fa1a98/src/base/RedShareGLSL.js";
+import RedGPU from "https://rawcdn.githack.com/redcamel/RedGPU/68757c12396a9c37bd72f05139eb797e12fa1a98/dist/RedGPU.min.mjs";
 
-class VertexColorMaterial extends RedBaseMaterial {
+class VertexColorMaterial extends RedGPU.BaseMaterial {
     static vertexShaderGLSL = `
     #version 460
-    ${RedShareGLSL.GLSL_SystemUniforms_vertex.systemUniforms}
+    ${RedGPU.ShareGLSL.GLSL_SystemUniforms_vertex.systemUniforms}
     layout(set=2,binding = 0) uniform Uniforms {
         mat4 modelMatrix;
     } uniforms;
@@ -34,22 +35,29 @@ class VertexColorMaterial extends RedBaseMaterial {
         outColor = vVertexColor;
     }
     `;
-    static PROGRAM_OPTION_LIST = [];
+    static PROGRAM_OPTION_LIST = {vertex: [], fragment: []};
     static uniformsBindGroupLayoutDescriptor_material = {
         bindings: [
 
         ]
     };
-    static uniformBufferDescriptor_vertex = RedBaseMaterial.uniformBufferDescriptor_empty;
-    static uniformBufferDescriptor_fragment = RedBaseMaterial.uniformBufferDescriptor_empty;
+    static uniformBufferDescriptor_vertex = RedGPU.BaseMaterial.uniformBufferDescriptor_empty;
+    static uniformBufferDescriptor_fragment = RedGPU.BaseMaterial.uniformBufferDescriptor_empty;
 
-    constructor(redGPU) {
-        super(redGPU);
-        this.resetBindingInfo()
+    constructor(redGPUContext) {
+        super(redGPUContext);
+        this.needResetBindingInfo = true
     }
     resetBindingInfo() {
         this.bindings = [
-
+            {
+                binding: 0,
+                resource: {
+                    buffer: this.uniformBuffer_fragment.GPUBuffer,
+                    offset: 0,
+                    size: this.uniformBufferDescriptor_fragment.size
+                }
+            }
         ];
         this._afterResetBindingInfo();
     }
@@ -57,22 +65,20 @@ class VertexColorMaterial extends RedBaseMaterial {
 
 (async function () {
     const c = document.getElementById('canvas');
-    const glslangModule = await import(/* webpackIgnore: true */ 'https://unpkg.com/@webgpu/glslang@0.0.9/dist/web-devel/glslang.js');
-
-    const glslang = await glslangModule.default();
-    let redGPU = new RedGPU(c, glslang,
+    new RedGPU.RedGPUContext(
+        c,
         function () {
 
-            let tScene = new RedScene();
+            let tScene = new RedGPU.Scene();
             tScene.backgroundColor = '#fff';
             
-            let tCamera = new RedObitController(this);
+            let tCamera = new RedGPU.ObitController(this);
 
-            let tView = new RedView(this, tScene, tCamera);
-            redGPU.addView(tView);
+            let tView = new RedGPU.View(this, tScene, tCamera);
+            this.addView(tView);
             tCamera.distance = 2;
 
-            redGPU.setSize(window.innerWidth, window.innerHeight);
+            this.setSize(window.innerWidth, window.innerHeight);
 
             let interleaveData = new Float32Array(
                 [
@@ -86,36 +92,37 @@ class VertexColorMaterial extends RedBaseMaterial {
                 [0, 1, 2]
             );
             
-            let geometry = new RedGeometry(
-                redGPU,
-                new RedBuffer(
-                    redGPU,
+            let geometry = new RedGPU.Geometry(
+                this,
+                new RedGPU.Buffer(
+                    this,
                     'interleaveBuffer',
-                    RedBuffer.TYPE_VERTEX,
+                    RedGPU.Buffer.TYPE_VERTEX,
                     new Float32Array(interleaveData),
                     [
-                        new RedInterleaveInfo('vertexPosition', 'float3'),
-                        new RedInterleaveInfo('vertexColor', 'float4')
+                        new RedGPU.InterleaveInfo('vertexPosition', 'float3'),
+                        new RedGPU.InterleaveInfo('vertexColor', 'float4')
                     ]
                 ),
-                new RedBuffer(
-                    redGPU,
+                new RedGPU.Buffer(
+                    this,
                     'indexBuffer',
-                    RedBuffer.TYPE_INDEX,
+                    RedGPU.Buffer.TYPE_INDEX,
                     new Uint32Array(indexData)
                 )
             );
 
-            let colorMat = new VertexColorMaterial(redGPU);
-            let tMesh = new RedMesh(redGPU, geometry, colorMat);
+            let colorMat = new VertexColorMaterial(this);
+            let tMesh = new RedGPU.Mesh(this, geometry, colorMat);
             tScene.addChild(tMesh);
 
-            let renderer = new RedRender();
-            let render = function (time) {
-                renderer.render(time, redGPU);
+            let renderer = new RedGPU.Render();
+            let render = time => {
+                renderer.render(time, this);
                 requestAnimationFrame(render);
             };
             requestAnimationFrame(render);
+            
         }
     );
 
