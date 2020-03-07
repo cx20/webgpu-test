@@ -37,9 +37,9 @@ class VertexColorMaterial extends RedGPU.BaseMaterial {
     `;
     static PROGRAM_OPTION_LIST = {vertex: [], fragment: []};
     static uniformsBindGroupLayoutDescriptor_material = {
-        bindings: [
-
-        ]
+		bindings: [
+			{binding: 0, visibility: GPUShaderStage.FRAGMENT, type: "uniform-buffer"}
+		]
     };
     static uniformBufferDescriptor_vertex = RedGPU.BaseMaterial.uniformBufferDescriptor_empty;
     static uniformBufferDescriptor_fragment = RedGPU.BaseMaterial.uniformBufferDescriptor_empty;
