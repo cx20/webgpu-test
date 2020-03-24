@@ -1,135 +1,118 @@
-import RedGPU from "https://rawcdn.githack.com/redcamel/RedGPU/bf834ebfcb98d98b4c77084f0bc18c6a2574b77b/src/RedGPU.js";
-import RedBuffer from "https://rawcdn.githack.com/redcamel/RedGPU/bf834ebfcb98d98b4c77084f0bc18c6a2574b77b/src/buffer/RedBuffer.js";
-import RedGeometry from "https://rawcdn.githack.com/redcamel/RedGPU/bf834ebfcb98d98b4c77084f0bc18c6a2574b77b/src/geometry/RedGeometry.js";
-import RedInterleaveInfo from "https://rawcdn.githack.com/redcamel/RedGPU/bf834ebfcb98d98b4c77084f0bc18c6a2574b77b/src/geometry/RedInterleaveInfo.js";
-import RedMesh from "https://rawcdn.githack.com/redcamel/RedGPU/bf834ebfcb98d98b4c77084f0bc18c6a2574b77b/src/object3D/RedMesh.js";
-import RedRender from "https://rawcdn.githack.com/redcamel/RedGPU/bf834ebfcb98d98b4c77084f0bc18c6a2574b77b/src/renderer/RedRender.js";
-import RedScene from "https://rawcdn.githack.com/redcamel/RedGPU/bf834ebfcb98d98b4c77084f0bc18c6a2574b77b/src/RedScene.js";
-import RedView from "https://rawcdn.githack.com/redcamel/RedGPU/bf834ebfcb98d98b4c77084f0bc18c6a2574b77b/src/RedView.js";
-import RedObitController from "https://rawcdn.githack.com/redcamel/RedGPU/bf834ebfcb98d98b4c77084f0bc18c6a2574b77b/src/controller/RedObitController.js";
-import RedBaseMaterial from "https://rawcdn.githack.com/redcamel/RedGPU/bf834ebfcb98d98b4c77084f0bc18c6a2574b77b/src/base/RedBaseMaterial.js";
-import RedShareGLSL from "https://rawcdn.githack.com/redcamel/RedGPU/bf834ebfcb98d98b4c77084f0bc18c6a2574b77b/src/base/RedShareGLSL.js";
-import RedBitmapMaterial from "https://rawcdn.githack.com/redcamel/RedGPU/bf834ebfcb98d98b4c77084f0bc18c6a2574b77b/src/material/RedBitmapMaterial.js";
-import RedBitmapTexture from "https://rawcdn.githack.com/redcamel/RedGPU/bf834ebfcb98d98b4c77084f0bc18c6a2574b77b/src/resources/RedBitmapTexture.js";
+import RedGPU from "https://redcamel.github.io/RedGPU/src/RedGPU.js";
 
-(async function () {
-    const c = document.getElementById('canvas');
-    const glslangModule = await import(/* webpackIgnore: true */ 'https://unpkg.com/@webgpu/glslang@0.0.9/dist/web-devel/glslang.js');
+const c = document.getElementById('canvas');
 
-    const glslang = await glslangModule.default();
-    let redGPU = new RedGPU(c, glslang,
-        function () {
+new RedGPU.RedGPUContext(c,
+    function () {
+        let tScene = new RedGPU.Scene();
+        tScene.backgroundColor = '#fff';
 
-            let tScene = new RedScene();
-            tScene.backgroundColor = '#fff';
-            
-            let tCamera = new RedObitController(this);
-            let tView = new RedView(this, tScene, tCamera);
-            redGPU.addView(tView);
-            tCamera.distance = 2;
+        let tCamera = new RedGPU.ObitController(this);
+        let tView = new RedGPU.View(this, tScene, tCamera);
+        this.addView(tView);
+        tCamera.distance = 2;
 
-            redGPU.view = tView
-            redGPU.setSize(window.innerWidth, window.innerHeight);
+        this.setSize(window.innerWidth, window.innerHeight);
 
-            // Cube data
-            //             1.0 y 
-            //              ^  -1.0 
-            //              | / z
-            //              |/       x
-            // -1.0 -----------------> +1.0
-            //            / |
-            //      +1.0 /  |
-            //           -1.0
-            // 
-            //         [7]------[6]
-            //        / |      / |
-            //      [3]------[2] |
-            //       |  |     |  |
-            //       | [4]----|-[5]
-            //       |/       |/
-            //      [0]------[1]
-            //
-            let interleaveData = new Float32Array(
+        // Cube data
+        //             1.0 y
+        //              ^  -1.0
+        //              | / z
+        //              |/       x
+        // -1.0 -----------------> +1.0
+        //            / |
+        //      +1.0 /  |
+        //           -1.0
+        //
+        //         [7]------[6]
+        //        / |      / |
+        //      [3]------[2] |
+        //       |  |     |  |
+        //       | [4]----|-[5]
+        //       |/       |/
+        //      [0]------[1]
+        //
+        let interleaveData = new Float32Array(
+            [
+                // Front face
+                -0.5, -0.5,  0.5,    0.0,  0.0,  1.0,   0.0, 0.0, // v0
+                 0.5, -0.5,  0.5,    0.0,  0.0,  1.0,   1.0, 0.0, // v1
+                 0.5,  0.5,  0.5,    0.0,  0.0,  1.0,   1.0, 1.0, // v2
+                -0.5,  0.5,  0.5,    0.0,  0.0,  1.0,   0.0, 1.0, // v3
+                // Back face
+                -0.5, -0.5, -0.5,    0.0,  0.0, -1.0,   1.0, 0.0, // v4
+                 0.5, -0.5, -0.5,    0.0,  0.0, -1.0,   1.0, 1.0, // v5
+                 0.5,  0.5, -0.5,    0.0,  0.0, -1.0,   0.0, 1.0, // v6
+                -0.5,  0.5, -0.5,    0.0,  0.0, -1.0,   0.0, 0.0, // v7
+                // Top face
+                 0.5,  0.5,  0.5,    0.0,  1.0,  0.0,   0.0, 1.0, // v2
+                -0.5,  0.5,  0.5,    0.0,  1.0,  0.0,   0.0, 0.0, // v3
+                -0.5,  0.5, -0.5,    0.0,  1.0,  0.0,   1.0, 0.0, // v7
+                 0.5,  0.5, -0.5,    0.0,  1.0,  0.0,   1.0, 1.0, // v6
+                // Bottom face
+                -0.5, -0.5,  0.5,    0.0,  1.5,  0.0,   1.0, 1.0, // v0
+                 0.5, -0.5,  0.5,    0.0,  1.5,  0.0,   0.0, 1.0, // v1
+                 0.5, -0.5, -0.5,    0.0,  1.5,  0.0,   0.0, 0.0, // v5
+                -0.5, -0.5, -0.5,    0.0,  1.5,  0.0,   1.0, 0.0, // v4
+                // Right face
+                 0.5, -0.5,  0.5,    1.0,  0.0,  0.0,   1.0, 0.0, // v1
+                 0.5,  0.5,  0.5,    1.0,  0.0,  0.0,   1.0, 1.0, // v2
+                 0.5,  0.5, -0.5,    1.0,  0.0,  0.0,   0.0, 1.0, // v6
+                 0.5, -0.5, -0.5,    1.0,  0.0,  0.0,   0.0, 0.0, // v5
+                // Left face
+                -0.5, -0.5,  0.5,   -1.0,  0.0,  0.0,   0.0, 0.0, // v0
+                -0.5,  0.5,  0.5,   -1.0,  0.0,  0.0,   1.0, 0.0, // v3
+                -0.5,  0.5, -0.5,   -1.0,  0.0,  0.0,   1.0, 1.0, // v7
+                -0.5, -0.5, -0.5,   -1.0,  0.0,  0.0,   0.0, 1.0  // v4
+            ]
+        );
+        let indexData = new Uint16Array(
+            [
+                0,  1,  2,    0,  2 , 3,  // Front face
+                4,  5,  6,    4,  6 , 7,  // Back face
+                8,  9, 10,    8, 10, 11,  // Top face
+                12, 13, 14,   12, 14, 15,  // Bottom face
+                16, 17, 18,   16, 18, 19,  // Right face
+                20, 21, 22,   20, 22, 23   // Left face
+            ]
+        );
+
+        let geometry = new RedGPU.Geometry(
+            this,
+            new RedGPU.Buffer(
+                this,
+                'interleaveBuffer',
+                RedGPU.Buffer.TYPE_VERTEX,
+                new Float32Array(interleaveData),
                 [
-                    // Front face
-                    -0.5, -0.5,  0.5,    0.0,  0.0,  1.0,   0.0, 0.0, // v0
-                     0.5, -0.5,  0.5,    0.0,  0.0,  1.0,   1.0, 0.0, // v1
-                     0.5,  0.5,  0.5,    0.0,  0.0,  1.0,   1.0, 1.0, // v2
-                    -0.5,  0.5,  0.5,    0.0,  0.0,  1.0,   0.0, 1.0, // v3
-                    // Back face
-                    -0.5, -0.5, -0.5,    0.0,  0.0, -1.0,   1.0, 0.0, // v4
-                     0.5, -0.5, -0.5,    0.0,  0.0, -1.0,   1.0, 1.0, // v5
-                     0.5,  0.5, -0.5,    0.0,  0.0, -1.0,   0.0, 1.0, // v6
-                    -0.5,  0.5, -0.5,    0.0,  0.0, -1.0,   0.0, 0.0, // v7
-                    // Top face
-                     0.5,  0.5,  0.5,    0.0,  1.0,  0.0,   0.0, 1.0, // v2
-                    -0.5,  0.5,  0.5,    0.0,  1.0,  0.0,   0.0, 0.0, // v3
-                    -0.5,  0.5, -0.5,    0.0,  1.0,  0.0,   1.0, 0.0, // v7
-                     0.5,  0.5, -0.5,    0.0,  1.0,  0.0,   1.0, 1.0, // v6
-                    // Bottom face
-                    -0.5, -0.5,  0.5,    0.0,  1.5,  0.0,   1.0, 1.0, // v0
-                     0.5, -0.5,  0.5,    0.0,  1.5,  0.0,   0.0, 1.0, // v1
-                     0.5, -0.5, -0.5,    0.0,  1.5,  0.0,   0.0, 0.0, // v5
-                    -0.5, -0.5, -0.5,    0.0,  1.5,  0.0,   1.0, 0.0, // v4
-                    // Right face
-                     0.5, -0.5,  0.5,    1.0,  0.0,  0.0,   1.0, 0.0, // v1
-                     0.5,  0.5,  0.5,    1.0,  0.0,  0.0,   1.0, 1.0, // v2
-                     0.5,  0.5, -0.5,    1.0,  0.0,  0.0,   0.0, 1.0, // v6
-                     0.5, -0.5, -0.5,    1.0,  0.0,  0.0,   0.0, 0.0, // v5
-                    // Left face
-                    -0.5, -0.5,  0.5,   -1.0,  0.0,  0.0,   0.0, 0.0, // v0
-                    -0.5,  0.5,  0.5,   -1.0,  0.0,  0.0,   1.0, 0.0, // v3
-                    -0.5,  0.5, -0.5,   -1.0,  0.0,  0.0,   1.0, 1.0, // v7
-                    -0.5, -0.5, -0.5,   -1.0,  0.0,  0.0,   0.0, 1.0  // v4
+                    new RedGPU.InterleaveInfo('vertexPosition', 'float3'),
+                    new RedGPU.InterleaveInfo('vertexNormal', 'float3'),
+                    new RedGPU.InterleaveInfo('texcoord', 'float2')
                 ]
-            );
-            let indexData = new Uint16Array(
-                [
-                     0,  1,  2,    0,  2 , 3,  // Front face
-                     4,  5,  6,    4,  6 , 7,  // Back face
-                     8,  9, 10,    8, 10, 11,  // Top face
-                    12, 13, 14,   12, 14, 15,  // Bottom face
-                    16, 17, 18,   16, 18, 19,  // Right face
-                    20, 21, 22,   20, 22, 23   // Left face
-                ]
-            );
-            
-            let geometry = new RedGeometry(
-                redGPU,
-                new RedBuffer(
-                    redGPU,
-                    'interleaveBuffer',
-                    RedBuffer.TYPE_VERTEX,
-                    new Float32Array(interleaveData),
-                    [
-                        new RedInterleaveInfo('vertexPosition', 'float3'),
-                        new RedInterleaveInfo('vertexNormal', 'float3'),
-                        new RedInterleaveInfo('texcoord', 'float2')
-                    ]
-                ),
-                new RedBuffer(
-                    redGPU,
-                    'indexBuffer',
-                    RedBuffer.TYPE_INDEX,
-                    new Uint32Array(indexData)
-                )
-            );
-            let texture = new RedBitmapTexture(redGPU, '../../../assets/textures/frog.jpg');
-            let textureMat = new RedBitmapMaterial(redGPU, texture);
-            let tMesh = new RedMesh(redGPU, geometry, textureMat);
-            tMesh.cullMode = 'none';
-            tScene.addChild(tMesh);
+            ),
+            new RedGPU.Buffer(
+                this,
+                'indexBuffer',
+                RedGPU.Buffer.TYPE_INDEX,
+                new Uint32Array(indexData)
+            )
+        );
+        let texture = new RedGPU.BitmapTexture(this, 'https://cx20.github.io/webgpu-test/assets/textures/frog.jpg');
+        let textureMat = new RedGPU.BitmapMaterial(this, texture);
+        let tMesh = new RedGPU.Mesh(this, geometry, textureMat);
+        tMesh.cullMode = 'none';
+        tScene.addChild(tMesh);
 
-            let renderer = new RedRender();
-            let render = function (time) {
-                tMesh.rotationX += 1;
-                tMesh.rotationY += 1;
-                tMesh.rotationZ += 1;
-                renderer.render(time, redGPU, tView);
-                requestAnimationFrame(render);
-            };
+        let renderer = new RedGPU.Render();
+        let render =  (time)=> {
+            tMesh.rotationX += 1;
+            tMesh.rotationY += 1;
+            tMesh.rotationZ += 1;
+            renderer.render(time, this);
             requestAnimationFrame(render);
-        }
-    );
+        };
+        requestAnimationFrame(render);
 
-})();
+
+    }
+)
