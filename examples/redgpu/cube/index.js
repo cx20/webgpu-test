@@ -7,14 +7,14 @@ class VertexColorMaterial extends RedGPU.BaseMaterial {
     #version 460
     ${RedGPU.ShareGLSL.GLSL_SystemUniforms_vertex.systemUniforms}
     ${RedGPU.ShareGLSL.GLSL_SystemUniforms_vertex.meshUniforms}
-    layout(set=2,binding = 0) uniform Uniforms {
+    layout(set = 2, binding = 0) uniform Uniforms {
         mat4 modelMatrix;
     } uniforms;
     layout(location = 0) in vec3 position;
     layout(location = 1) in vec4 vertexColor;
     layout(location = 0) out vec4 vVertexColor;
     void main() {
-        gl_Position = systemUniforms.perspectiveMTX * systemUniforms.cameraMTX * meshMatrixUniforms.modelMatrix[ int(meshUniforms.index) ] * vec4(position,1.0);
+        gl_Position = systemUniforms.perspectiveMTX * systemUniforms.cameraMTX * meshMatrixUniforms.modelMatrix[ int(meshUniforms.index) ] * vec4(position, 1.0);
         vVertexColor = vertexColor;
     }
     `;
