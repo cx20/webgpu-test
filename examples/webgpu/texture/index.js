@@ -4,7 +4,7 @@ const vertexShaderGLSL = document.getElementById("vs").textContent;
 const fragmentShaderGLSL = document.getElementById("fs").textContent;
 
 async function init(glslang) {
-    const gpu = navigator['gpu']; //
+    const gpu = navigator['gpu'];
     const adapter = await gpu.requestAdapter();
     const device = await adapter.requestDevice();
 
