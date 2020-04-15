@@ -123,7 +123,7 @@ async function init(glslang) {
     let indexBuffer = makeIndexBuffer(device, new Uint32Array(indices));
 
     const uniformsBindGroupLayout = device.createBindGroupLayout({
-        bindings: [{
+        entries: [{
             binding: 0,
             visibility: GPUShaderStage.VERTEX,
             type: "uniform-buffer"
@@ -215,7 +215,7 @@ async function init(glslang) {
 
     const uniformBindGroup = device.createBindGroup({
         layout: uniformsBindGroupLayout,
-        bindings: [{
+        entries: [{
             binding: 0,
             resource: {
                 buffer: uniformBuffer,
