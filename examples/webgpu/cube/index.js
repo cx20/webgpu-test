@@ -209,8 +209,8 @@ async function init(glslang) {
         usage: GPUTextureUsage.OUTPUT_ATTACHMENT
     });
     let render =  function () {
-        uniformBuffer.setSubData(0, getTransformationMatrix());
         const commandEncoder = device.createCommandEncoder();
+        const { uploadBuffer } = updateBufferData(device, uniformBuffer, 0, getTransformationMatrix(), commandEncoder);
         const textureView = swapChain.getCurrentTexture().createView();
         const renderPassDescriptor = {
             colorAttachments: [{
@@ -234,6 +234,7 @@ async function init(glslang) {
         passEncoder.drawIndexed(indexBuffer.pointNum, 1, 0, 0, 0);
         passEncoder.endPass();
         device.defaultQueue.submit([commandEncoder.finish()]);
+        uploadBuffer.destroy();
         requestAnimationFrame(render);
     }
     requestAnimationFrame(render)
@@ -275,4 +276,19 @@ function makeIndexBuffer(device, data) {
     indicesBuffer.pointNum = data.length;
     indicesBuffer.unmap();
     return indicesBuffer;
+}
+
+function updateBufferData(device, dst, dstOffset, src, commandEncoder) {
+    const [uploadBuffer, mapping] = device.createBufferMapped({
+        size: src.byteLength,
+        usage: GPUBufferUsage.COPY_SRC,
+    });
+
+    new src.constructor(mapping).set(src);
+    uploadBuffer.unmap();
+
+    commandEncoder = commandEncoder || device.createCommandEncoder();
+    commandEncoder.copyBufferToBuffer(uploadBuffer, 0, dst, dstOffset, src.byteLength);
+
+    return { commandEncoder, uploadBuffer };
 }

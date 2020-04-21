@@ -191,9 +191,9 @@ async function init(glslang) {
 
     let render =  function () {
 
-        uniformBuffer.setSubData(0, getTransformationMatrix());
-        uniformLightBuffer.setSubData(0, new Float32Array([100.0, 0.0, 100.0]));
         const commandEncoder = device.createCommandEncoder();
+        const { uploadBuffer: uploadBuffer1 } = updateBufferData(device, uniformBuffer, 0, getTransformationMatrix(), commandEncoder);
+        const { uploadBuffer: uploadBuffer2 } = updateBufferData(device, uniformLightBuffer, 0, new Float32Array([100.0, 0.0, 100.0]), commandEncoder);
         const textureView = swapChain.getCurrentTexture().createView();
         const renderPassDescriptor = {
             colorAttachments: [{
@@ -218,6 +218,8 @@ async function init(glslang) {
         passEncoder.drawIndexed(indexBuffer.pointNum, 1, 0, 0, 0);
         passEncoder.endPass();
         device.defaultQueue.submit([commandEncoder.finish()]);
+        uploadBuffer1.destroy();
+        uploadBuffer2.destroy();
         requestAnimationFrame(render);
     }
 
@@ -268,6 +270,21 @@ function makeIndexBuffer(device, data) {
     indicesBuffer.pointNum = data.length;
     indicesBuffer.unmap();
     return indicesBuffer;
+}
+
+function updateBufferData(device, dst, dstOffset, src, commandEncoder) {
+    const [uploadBuffer, mapping] = device.createBufferMapped({
+        size: src.byteLength,
+        usage: GPUBufferUsage.COPY_SRC,
+    });
+
+    new src.constructor(mapping).set(src);
+    uploadBuffer.unmap();
+
+    commandEncoder = commandEncoder || device.createCommandEncoder();
+    commandEncoder.copyBufferToBuffer(uploadBuffer, 0, dst, dstOffset, src.byteLength);
+
+    return { commandEncoder, uploadBuffer };
 }
 
 async function createTextureFromImage(device, src, usage) {
