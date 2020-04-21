@@ -347,24 +347,24 @@ function makeShaderModule_GLSL(glslang, device, type, source) {
 }
 
 function makeVertexBuffer(device, data) {
-    let bufferDescriptor = {
+    const [verticesBuffer, vertexMapping] = device.createBufferMapped({
         size: data.byteLength,
-        usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST
-    };
-    let verticesBuffer = device.createBuffer(bufferDescriptor);
-    verticesBuffer.setSubData(0, data);
-    return verticesBuffer
+        usage: GPUBufferUsage.VERTEX
+    });
+    new Float32Array(vertexMapping).set(data);
+    verticesBuffer.unmap();
+    return verticesBuffer;
 }
 
 function makeIndexBuffer(device, data) {
-    let bufferDescriptor = {
+    const [indicesBuffer, indicesMapping] = device.createBufferMapped({
         size: data.byteLength,
-        usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST
-    };
-    let indicesBuffer = device.createBuffer(bufferDescriptor);
-    indicesBuffer.setSubData(0, data);
-    indicesBuffer.pointNum = data.length
-    return indicesBuffer
+        usage: GPUBufferUsage.INDEX
+    });
+    new Uint32Array(indicesMapping).set(data);
+    indicesBuffer.pointNum = data.length;
+    indicesBuffer.unmap();
+    return indicesBuffer;
 }
 
 async function createTextureFromImage(device, src, usage) {
