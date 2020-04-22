@@ -4,11 +4,11 @@ const vertexShaderGLSL = document.getElementById("vs").textContent;
 const fragmentShaderGLSL = document.getElementById("fs").textContent;
 
 async function init(glslang) {
-    const gpu = navigator['gpu'];
+    const gpu = navigator["gpu"];
     const adapter = await gpu.requestAdapter();
     const device = await adapter.requestDevice();
 
-    const c = document.getElementById('c');
+    const c = document.getElementById("c");
     c.width = window.innerWidth;
     c.height = window.innerHeight;
 
@@ -16,12 +16,12 @@ async function init(glslang) {
     let projectionMatrix = mat4.create();
     mat4.perspective(projectionMatrix, 45, aspect, 0.1, 100.0);
 
-    const ctx = c.getContext('gpupresent')
+    const ctx = c.getContext("gpupresent")
     const swapChainFormat = "bgra8unorm";
     const swapChain = configureSwapChain(device, swapChainFormat, ctx);
 
-    let vShaderModule = makeShaderModule_GLSL(glslang, device, 'vertex', vertexShaderGLSL);
-    let fShaderModule = makeShaderModule_GLSL(glslang, device, 'fragment', fragmentShaderGLSL);
+    let vShaderModule = makeShaderModule_GLSL(glslang, device, "vertex", vertexShaderGLSL);
+    let fShaderModule = makeShaderModule_GLSL(glslang, device, "fragment", fragmentShaderGLSL);
 
     // Cube data
     //             1.0 y 
@@ -112,14 +112,14 @@ async function init(glslang) {
         layout: pipelineLayout,
         vertexStage: {
             module: vShaderModule,
-            entryPoint: 'main'
+            entryPoint: "main"
         },
         fragmentStage: {
             module: fShaderModule,
-            entryPoint: 'main'
+            entryPoint: "main"
         },
         vertexState: {
-            indexFormat: 'uint32',
+            indexFormat: "uint32",
             vertexBuffers: [
                 {
                     arrayStride: 3 * 4,
@@ -155,10 +155,10 @@ async function init(glslang) {
                 }
             }
         ],
-        primitiveTopology: 'triangle-list',
+        primitiveTopology: "triangle-list",
         rasterizationState: {
             frontFace : "ccw",
-            cullMode : 'none'
+            cullMode : "none"
         },
         depthStencilState: {
             depthWriteEnabled: true,

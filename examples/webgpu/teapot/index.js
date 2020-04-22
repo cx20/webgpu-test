@@ -4,11 +4,11 @@ const vertexShaderGLSL = document.getElementById("vs").textContent;
 const fragmentShaderGLSL = document.getElementById("fs").textContent;
 
 async function init(glslang) {
-    const gpu = navigator['gpu'];
+    const gpu = navigator["gpu"];
     const adapter = await gpu.requestAdapter();
     const device = await adapter.requestDevice();
 
-    const c = document.getElementById('c');
+    const c = document.getElementById("c");
     c.width = window.innerWidth;
     c.height = window.innerHeight;
 
@@ -16,12 +16,12 @@ async function init(glslang) {
     let projectionMatrix = mat4.create();
     mat4.perspective(projectionMatrix, 45, aspect, 0.1, 1000.0);
 
-    const ctx = c.getContext('gpupresent')
+    const ctx = c.getContext("gpupresent")
     const swapChainFormat = "bgra8unorm";
     const swapChain = configureSwapChain(device, swapChainFormat, ctx);
 
-    let vShaderModule = makeShaderModule_GLSL(glslang, device, 'vertex', vertexShaderGLSL);
-    let fShaderModule = makeShaderModule_GLSL(glslang, device, 'fragment', fragmentShaderGLSL);
+    let vShaderModule = makeShaderModule_GLSL(glslang, device, "vertex", vertexShaderGLSL);
+    let fShaderModule = makeShaderModule_GLSL(glslang, device, "fragment", fragmentShaderGLSL);
 
     let vertexBuffer;
     let normalBuffer;
@@ -55,14 +55,14 @@ async function init(glslang) {
         layout: pipelineLayout,
         vertexStage: {
             module: vShaderModule,
-            entryPoint: 'main'
+            entryPoint: "main"
         },
         fragmentStage: {
             module: fShaderModule,
-            entryPoint: 'main'
+            entryPoint: "main"
         },
         vertexState: {
-            indexFormat: 'uint32',
+            indexFormat: "uint32",
             vertexBuffers: [
                 {
                     arrayStride: 3 * 4,
@@ -109,10 +109,10 @@ async function init(glslang) {
                 }
             }
         ],
-        primitiveTopology: 'triangle-list',
+        primitiveTopology: "triangle-list",
         rasterizationState: {
             frontFace : "ccw",
-            cullMode : 'none'
+            cullMode : "none"
         },
         depthStencilState: {
             depthWriteEnabled: true,
@@ -288,15 +288,15 @@ function updateBufferData(device, dst, dstOffset, src, commandEncoder) {
 }
 
 async function createTextureFromImage(device, src, usage) {
-    const img = document.createElement('img');
+    const img = document.createElement("img");
     img.src = src;
     await img.decode();
 
-    const imageCanvas = document.createElement('canvas');
+    const imageCanvas = document.createElement("canvas");
     imageCanvas.width = img.width;
     imageCanvas.height = img.height;
 
-    const imageCanvasContext = imageCanvas.getContext('2d');
+    const imageCanvasContext = imageCanvas.getContext("2d");
     imageCanvasContext.translate(0, img.height);
     imageCanvasContext.scale(1, -1);
     imageCanvasContext.drawImage(img, 0, 0, img.width, img.height);
