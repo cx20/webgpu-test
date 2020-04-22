@@ -291,6 +291,9 @@ async function init(glslang) {
     let render =  function () {
 
         const commandEncoder = device.createCommandEncoder();
+        const { uploadBuffer: buffer1 } = updateBufferData(device, uniformBuffer, 0, getTransformationMatrix1(), commandEncoder);
+        const { uploadBuffer: buffer2 } = updateBufferData(device, uniformBuffer, offset, getTransformationMatrix2(), commandEncoder);
+    
         const textureView = swapChain.getCurrentTexture().createView();
         const renderPassDescriptor = {
             colorAttachments: [{
@@ -312,18 +315,18 @@ async function init(glslang) {
         passEncoder.setIndexBuffer(indexBuffer);
 
         // 1st Cube
-        uniformBuffer.setSubData(0, getTransformationMatrix1());
         passEncoder.setBindGroup(0, uniformBindGroup1);
         passEncoder.drawIndexed(indexBuffer.pointNum, 1, 0, 0, 0);
 
         // 2nd Cube
-        uniformBuffer.setSubData(offset, getTransformationMatrix2());
         passEncoder.setBindGroup(0, uniformBindGroup2);
         passEncoder.drawIndexed(indexBuffer.pointNum, 1, 0, 0, 0);
 
         passEncoder.endPass();
 
         device.defaultQueue.submit([commandEncoder.finish()]);
+        buffer1.destroy();
+        buffer2.destroy();
         requestAnimationFrame(render);
     }
     requestAnimationFrame(render)
@@ -365,6 +368,21 @@ function makeIndexBuffer(device, data) {
     indicesBuffer.pointNum = data.length;
     indicesBuffer.unmap();
     return indicesBuffer;
+}
+
+function updateBufferData(device, dst, dstOffset, src, commandEncoder) {
+    const [uploadBuffer, mapping] = device.createBufferMapped({
+        size: src.byteLength,
+        usage: GPUBufferUsage.COPY_SRC,
+    });
+
+    new src.constructor(mapping).set(src);
+    uploadBuffer.unmap();
+
+    commandEncoder = commandEncoder || device.createCommandEncoder();
+    commandEncoder.copyBufferToBuffer(uploadBuffer, 0, dst, dstOffset, src.byteLength);
+
+    return { commandEncoder, uploadBuffer };
 }
 
 async function createTextureFromImage(device, src, usage) {
