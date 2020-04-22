@@ -304,18 +304,20 @@ async function createTextureFromImage(device, src, usage) {
 
     let data = null;
 
-    const rowPitch = Math.ceil(img.width * 4 / 256) * 256;
-    if (rowPitch == img.width * 4) {
+    const bytesPerRow = Math.ceil(img.width * 4 / 256) * 256;
+    if (bytesPerRow == img.width * 4) {
         data = imageData.data;
     } else {
-        data = new Uint8Array(rowPitch * img.height);
+        data = new Uint8Array(bytesPerRow * img.height);
+        let imagePixelIndex = 0;
         for (let y = 0; y < img.height; ++y) {
             for (let x = 0; x < img.width; ++x) {
-                let i = x * 4 + y * rowPitch;
-                data[i] = imageData.data[i];
-                data[i + 1] = imageData.data[i + 1];
-                data[i + 2] = imageData.data[i + 2];
-                data[i + 3] = imageData.data[i + 3];
+                let i = x * 4 + y * bytesPerRow;
+                data[i] = imageData.data[imagePixelIndex];
+                data[i + 1] = imageData.data[imagePixelIndex + 1];
+                data[i + 2] = imageData.data[imagePixelIndex + 2];
+                data[i + 3] = imageData.data[imagePixelIndex + 3];
+                imagePixelIndex += 4;
             }
         }
     }
@@ -329,18 +331,18 @@ async function createTextureFromImage(device, src, usage) {
         format: "rgba8unorm",
         usage: GPUTextureUsage.COPY_DST | usage,
     });
-    const textureDataBuffer = device.createBuffer({
+
+    const [textureDataBuffer, mapping] = device.createBufferMapped({
         size: data.byteLength,
         usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
     });
-
-    textureDataBuffer.setSubData(0, data);
+    new Uint8Array(mapping).set(data);
+    textureDataBuffer.unmap();
 
     const commandEncoder = device.createCommandEncoder({});
     commandEncoder.copyBufferToTexture({
         buffer: textureDataBuffer,
-        rowPitch: rowPitch,
-        imageHeight: 0,
+        bytesPerRow,
     }, {
         texture: texture,
     }, {
@@ -350,6 +352,7 @@ async function createTextureFromImage(device, src, usage) {
     });
 
     device.defaultQueue.submit([commandEncoder.finish()]);
+    textureDataBuffer.destroy();
 
     return texture;
 }
