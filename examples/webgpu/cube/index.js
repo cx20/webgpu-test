@@ -190,7 +190,6 @@ async function init(glslang) {
         let viewMatrix = mat4.create();
         mat4.translate(viewMatrix, viewMatrix, vec3.fromValues(0, 0, -3));
         let now = Date.now() / 1000;
-        //mat4.rotate(viewMatrix, viewMatrix, 1, vec3.fromValues(Math.sin(now), Math.cos(now), 0));
         mat4.rotate(viewMatrix, viewMatrix, rad, [1, 1, 1]);
 
         let modelViewProjectionMatrix = mat4.create();
