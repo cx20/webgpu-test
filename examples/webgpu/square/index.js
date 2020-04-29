@@ -117,8 +117,8 @@ async function init(glslang) {
         passEncoder.setPipeline(pipeline);
         passEncoder.draw(4, 1, 0, 0);
         passEncoder.endPass();
-        const test = commandEncoder.finish()
-        device.defaultQueue.submit([test]);
+        device.defaultQueue.submit([commandEncoder.finish()]);
+        requestAnimationFrame(render)
     }
     requestAnimationFrame(render)
 
