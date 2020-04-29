@@ -2,6 +2,7 @@
 Test of WebGPU
 
 These samples run in Chrome Canary behind the flag "--enable-unsafe-webgpu".
+Firefox Nightly requires "dom.webgpu.enabled" and "gfx.webrender.all" to be enabled.
 
 |Library                                                                                                                     |![](assets/screenshot/triangle.jpg)                                                |![](assets/screenshot/square.jpg)                                                 |![](assets/screenshot/cube.jpg)                                                 |![](assets/screenshot/texture.jpg)                                              |![](assets/screenshot/teapot.jpg)                                               |
 |:---------------------------------------------------------------------------------------------------------------------------|:---------------------------------------------------------------------------------:|:--------------------------------------------------------------------------------:|:------------------------------------------------------------------------------:|:------------------------------------------------------------------------------:|:------------------------------------------------------------------------------:|
