@@ -214,7 +214,7 @@ async function init(glslang) {
         const renderPassDescriptor = {
             colorAttachments: [{
                 attachment: textureView,
-                loadValue: {r: 0, g: 0, b: 0, a: 0},
+                loadValue: {r: 1, g: 1, b: 1, a: 1},
             }],
             depthStencilAttachment: {
                 attachment: depthTexture.createView(),
