@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>[WIP] Testing Cube Using Hilo3d</title>
+  <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+<body>
+<script src="https://06wj.github.io/WebGPU-Playground/libs/glslang/web-devel/glslang.js"></script>
+<script src="https://06wj.github.io/WebGPU-Playground/libs/gl-matrix/gl-matrix-min.js"></script>
+<script src="https://06wj.github.io/WebGPU-Playground/libs/hilo3d/Hilo3d.js"></script>
+<script id="vs" type="x-shader/x-vertex">
+#version 450
+layout(set=0, binding=0) uniform VertexUniforms{
+    mat4 u_modelViewProjectionMatrix;
+};
+
+layout(location = 0) in vec3 a_position;
+layout(location = 1) in vec4 a_color;
+layout(location = 0) out vec4 vColor;
+void main() {
+    vec4 pos = vec4(a_position, 1.0);
+    vColor = a_color;
+    gl_Position = u_modelViewProjectionMatrix * pos;
+}
+</script>
+
+<script id="fs" type="x-shader/x-fragment">
+#version 450
+layout(location = 0) in vec4 vColor;
+layout(location = 0) out vec4 fragColor;
+void main() {
+    fragColor = vColor;
+}
+</script>
+
+<canvas id="c" width="465" height="465"></canvas>
+<script src="index.js"></script>
+</body>
+</html>
