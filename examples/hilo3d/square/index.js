@@ -162,7 +162,7 @@ function render() {
     passEncoder.setVertexBuffer(0, verticesBuffer);
     passEncoder.setVertexBuffer(1, colorsBuffer);
     passEncoder.setIndexBuffer(indicesBuffer);
-    passEncoder.drawIndexed(geometry.indices.count, 1, 0, 0);
+    passEncoder.drawIndexed(geometry.indices.count, 1, 0, 0, 0);
     passEncoder.endPass();
 
     device.defaultQueue.submit([commandEncoder.finish()]);
