@@ -124,21 +124,21 @@ const verticesBuffer = device.createBuffer({
     size: verticesData.byteLength,
     usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST
 });
-verticesBuffer.setSubData(0, verticesData);
+helpers.setSubData(verticesBuffer, 0, verticesData, device);
 
 const colorsData = geometry.colors.data;
 const colorsBuffer = device.createBuffer({
     size: colorsData.byteLength,
     usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST
 });
-colorsBuffer.setSubData(0, colorsData);
+helpers.setSubData(colorsBuffer, 0, colorsData, device);
 
 const indicesData = geometry.indices.data;
 const indicesBuffer = device.createBuffer({
     size: indicesData.byteLength,
     usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST
 });
-indicesBuffer.setSubData(0, indicesData);
+helpers.setSubData(indicesBuffer, 0, indicesData, device);
 
 const uniformComponentCount = 16;
 const uniformBufferSize = uniformComponentCount * 4;
@@ -231,7 +231,7 @@ function getModelMatrix(){
 
 function render() {
     renderPassDescriptor.colorAttachments[0].attachment = swapChain.getCurrentTexture().createView();
-    uniformBuffer.setSubData(0, getModelMatrix());
+    helpers.setSubData(uniformBuffer, 0, getModelMatrix(), device);
 
     const commandEncoder = device.createCommandEncoder({});
     const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
