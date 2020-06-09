@@ -28,7 +28,7 @@ class VertexColorMaterial extends RedGPU.BaseMaterial {
         fragment: []
     };
     static uniformsBindGroupLayoutDescriptor_material = {
-        bindings: []
+        entries: []
     };
     static uniformBufferDescriptor_vertex = RedGPU.BaseMaterial.uniformBufferDescriptor_empty;
     static uniformBufferDescriptor_fragment = RedGPU.BaseMaterial.uniformBufferDescriptor_empty;
@@ -39,7 +39,7 @@ class VertexColorMaterial extends RedGPU.BaseMaterial {
     }
 
     resetBindingInfo() {
-        this.bindings = [];
+        this.entries = [];
         this._afterResetBindingInfo();
     }
 }
