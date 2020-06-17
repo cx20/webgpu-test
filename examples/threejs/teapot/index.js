@@ -13,8 +13,8 @@ import {
     Vector3,
     Quaternion
 } from 'https://raw.githack.com/mrdoob/three.js/r111/build/three.module.js';
-import WebGPURenderer from 'https://rawcdn.githack.com/takahirox/THREE.WebGPURenderer/44d91fcc5ce2f92d71f1811d36f59b5a6510753e/src/renderers/WebGPURenderer.js';
-import glslangModule from 'https://rawcdn.githack.com/takahirox/THREE.WebGPURenderer/44d91fcc5ce2f92d71f1811d36f59b5a6510753e/examples/jsm/libs/glslang.js';
+import WebGPURenderer from 'https://rawcdn.githack.com/takahirox/THREE.WebGPURenderer/a2f57312bf9968fa1c415d63d46b0b35a8c9897f/src/renderers/WebGPURenderer.js';
+import glslangModule from 'https://rawcdn.githack.com/takahirox/THREE.WebGPURenderer/a2f57312bf9968fa1c415d63d46b0b35a8c9897f/examples/jsm/libs/glslang.js';
 
 let angle = 0;
 let vertexPositions;
