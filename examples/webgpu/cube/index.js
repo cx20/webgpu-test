@@ -257,33 +257,36 @@ function makeShaderModule_GLSL(glslang, device, type, source) {
 }
 
 function makeVertexBuffer(device, data) {
-    const [verticesBuffer, vertexMapping] = device.createBufferMapped({
+    const verticesBuffer = device.createBuffer({
         size: data.byteLength,
-        usage: GPUBufferUsage.VERTEX
+        usage: GPUBufferUsage.VERTEX,
+        mappedAtCreation: true
     });
-    new Float32Array(vertexMapping).set(data);
+    new Float32Array(verticesBuffer.getMappedRange()).set(data);
     verticesBuffer.unmap();
     return verticesBuffer;
 }
 
 function makeIndexBuffer(device, data) {
-    const [indicesBuffer, indicesMapping] = device.createBufferMapped({
+    const indicesBuffer = device.createBuffer({
         size: data.byteLength,
-        usage: GPUBufferUsage.INDEX
+        usage: GPUBufferUsage.INDEX,
+        mappedAtCreation: true
     });
-    new Uint32Array(indicesMapping).set(data);
+    new Uint32Array(indicesBuffer.getMappedRange()).set(data);
     indicesBuffer.pointNum = data.length;
     indicesBuffer.unmap();
     return indicesBuffer;
 }
 
 function updateBufferData(device, dst, dstOffset, src, commandEncoder) {
-    const [uploadBuffer, mapping] = device.createBufferMapped({
+    const uploadBuffer = device.createBuffer({
         size: src.byteLength,
         usage: GPUBufferUsage.COPY_SRC,
+        mappedAtCreation: true
     });
 
-    new src.constructor(mapping).set(src);
+    new src.constructor(uploadBuffer.getMappedRange()).set(src);
     uploadBuffer.unmap();
 
     commandEncoder = commandEncoder || device.createCommandEncoder();
