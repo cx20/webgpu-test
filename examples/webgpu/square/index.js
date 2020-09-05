@@ -142,11 +142,12 @@ function makeShaderModule_GLSL(glslang, device, type, source) {
 }
 
 function makeVertexBuffer(device, data) {
-    const [verticesBuffer, vertexMapping] = device.createBufferMapped({
+    const verticesBuffer = device.createBuffer({
         size: data.byteLength,
-        usage: GPUBufferUsage.VERTEX
+        usage: GPUBufferUsage.VERTEX,
+        mappedAtCreation: true,
     });
-    new Float32Array(vertexMapping).set(data);
+    new Float32Array(verticesBuffer.getMappedRange()).set(data);
     verticesBuffer.unmap();
     return verticesBuffer;
 }
