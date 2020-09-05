@@ -312,7 +312,7 @@ async function init(glslang) {
         passEncoder.setPipeline(pipeline);
         passEncoder.setVertexBuffer(0, vertexBuffer);
         passEncoder.setVertexBuffer(1, coordBuffer);
-        passEncoder.setIndexBuffer(indexBuffer);
+        passEncoder.setIndexBuffer(indexBuffer, "uint32");
 
         // 1st Cube
         passEncoder.setBindGroup(0, uniformBindGroup1);
