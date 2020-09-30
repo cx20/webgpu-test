@@ -1,34 +1,16 @@
-import {
-    Camera,
-    Mesh,
-    MeshBasicMaterial,
-    BufferGeometry,
-    BufferAttribute,
-    PerspectiveCamera,
-    Scene
-} from 'https://raw.githack.com/mrdoob/three.js/r111/build/three.module.js';
-import WebGPURenderer from 'https://rawcdn.githack.com/takahirox/THREE.WebGPURenderer/a2f57312bf9968fa1c415d63d46b0b35a8c9897f/src/renderers/WebGPURenderer.js';
-import glslangModule from 'https://rawcdn.githack.com/takahirox/THREE.WebGPURenderer/a2f57312bf9968fa1c415d63d46b0b35a8c9897f/examples/jsm/libs/glslang.js';
+import * as THREE from 'https://raw.githack.com/mrdoob/three.js/r121/build/three.module.js';
+import WebGPURenderer from 'https://raw.githack.com/mrdoob/three.js/r121/examples/jsm/renderers/webgpu/WebGPURenderer.js';
 
-const run = async () => {
-    const adapter = await navigator.gpu.requestAdapter();
-    const device = await adapter.requestDevice();
-    const glslang = await glslangModule();
+let camera, scene, renderer;
 
-    const renderer = new WebGPURenderer({
-        device,
-        glslang
-    });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(window.devicePixelRatio);
-    document.body.appendChild(renderer.domElement);
+init().then( animate ).catch( error );
 
-    const scene = new Scene();
+async function init() {
+    scene = new THREE.Scene();
 
-    const camera = new PerspectiveCamera(30, window.innerWidth / window.innerHeight, 0.1, 1000.0);
+    camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 0.1, 1000.0);
     camera.position.z = 3.0;
 
-    const material = new MeshBasicMaterial({ color: 0x0000ff });
     const vertexPositions = [
         [ 0.0,  0.5, 0.0], // v0
         [-0.5, -0.5, 0.0], // v1
@@ -40,28 +22,36 @@ const run = async () => {
         vertices[i * 3 + 1] = vertexPositions[i][1];
         vertices[i * 3 + 2] = vertexPositions[i][2];
     }
-    
-    const geometry = new BufferGeometry();
-    geometry.setAttribute('position', new BufferAttribute(vertices, 3));
-    geometry.setAttribute('normal', new BufferAttribute(vertices, 3));
 
-    const mesh = new Mesh(geometry, material);
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+    geometry.setAttribute('uv', new THREE.Float32BufferAttribute(null, 2)); // TODO: If you do not specify the uv attribute, an error occurs
+
+    const material = new THREE.MeshBasicMaterial({ color: 0x0000ff }); // TODO: Not supported yet
+    const mesh = new THREE.Mesh(geometry, material);
     scene.add(mesh);
 
-    const render = () => {
-        requestAnimationFrame(render);
-        renderer.render(scene, camera);
-    };
+    renderer = new WebGPURenderer();
+    renderer.setSize( window.innerWidth, window.innerHeight );
+    document.body.appendChild( renderer.domElement );
 
-    const onResize = event => {
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-    };
+    window.addEventListener( 'resize', onWindowResize, false );
 
-    window.addEventListener('resize', onResize, false);
+    return renderer.init();
+}
 
-    render();
-};
+function onWindowResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
 
-run();
+    renderer.setSize( window.innerWidth, window.innerHeight );
+}
+
+function animate() {
+    requestAnimationFrame( animate );
+    renderer.render( scene, camera );
+}
+
+function error( error ) {
+    console.error( error );
+}
