@@ -101,7 +101,7 @@ async function init() {
     scene.add(mesh);
 
     renderer = new WebGPURenderer();
-    renderer.setClearColor(0x000000);
+    renderer.setClearColor(0xffffff);
     renderer.setSize( window.innerWidth, window.innerHeight );
     document.body.appendChild( renderer.domElement );
 
