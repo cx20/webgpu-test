@@ -67,16 +67,23 @@ async function init() {
         vertices[i * 3 + 1] = vertexPositions[i][1];
         vertices[i * 3 + 2] = vertexPositions[i][2];
     }
+    
+    const uvs = new Float32Array([
+        0.0, 0.0,
+        0.0, 0.0,
+        0.0, 0.0
+    ]);
 
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
-    geometry.setAttribute('uv', new THREE.Float32BufferAttribute(null, 2)); // TODO: If you do not specify the uv attribute, an error occurs
+    geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2)); // TODO: If you do not specify the uv attribute, an error occurs
 
-    const material = new THREE.MeshBasicMaterial({ color: 0x0000ff }); // TODO: Not supported yet
+    const material = new THREE.MeshBasicMaterial({ map: createDataTexture() }); // TODO: Not color supported yet
     const mesh = new THREE.Mesh(geometry, material);
     scene.add(mesh);
 
     renderer = new WebGPURenderer();
+    renderer.setClearColor(0xffffff);
     renderer.setSize( window.innerWidth, window.innerHeight );
     document.body.appendChild( renderer.domElement );
 
@@ -95,6 +102,33 @@ function onWindowResize() {
 function animate() {
     requestAnimationFrame( animate );
     renderer.render( scene, camera );
+}
+
+function createDataTexture() {
+    const color = new THREE.Color( 0x0000ff );
+
+    const width = 1;
+    const height = 1;
+
+    const size = width * height;
+    const data = new Uint8Array( 4 * size );
+
+    const r = Math.floor( color.r * 255 );
+    const g = Math.floor( color.g * 255 );
+    const b = Math.floor( color.b * 255 );
+
+    for ( let i = 0; i < size; i ++ ) {
+
+        const stride = i * 4;
+
+        data[ stride ] = r;
+        data[ stride + 1 ] = g;
+        data[ stride + 2 ] = b;
+        data[ stride + 3 ] = 255;
+
+    }
+
+    return new THREE.DataTexture( data, width, height, THREE.RGBAFormat );
 }
 
 function error( error ) {
