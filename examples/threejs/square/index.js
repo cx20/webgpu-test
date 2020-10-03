@@ -1,36 +1,62 @@
-import {
-    Camera,
-    Mesh,
-    MeshBasicMaterial,
-    BufferGeometry,
-    BufferAttribute,
-    PerspectiveCamera,
-    Scene
-} from 'https://raw.githack.com/mrdoob/three.js/r111/build/three.module.js';
-import WebGPURenderer from 'https://rawcdn.githack.com/takahirox/THREE.WebGPURenderer/a2f57312bf9968fa1c415d63d46b0b35a8c9897f/src/renderers/WebGPURenderer.js';
-import glslangModule from 'https://rawcdn.githack.com/takahirox/THREE.WebGPURenderer/a2f57312bf9968fa1c415d63d46b0b35a8c9897f/examples/jsm/libs/glslang.js';
+import * as THREE from 'https://raw.githack.com/mrdoob/three.js/r121/build/three.module.js';
+import WebGPURenderer from 'https://raw.githack.com/mrdoob/three.js/r121/examples/jsm/renderers/webgpu/WebGPURenderer.js';
 
-const run = async () => {
-    const adapter = await navigator.gpu.requestAdapter();
-    const device = await adapter.requestDevice();
-    const glslang = await glslangModule();
+// NOTE: The shader currently used in the WebGPU Renderer's MeshBasicMaterial is the following code.
+//       Please note that you cannot specify the color because you are using a texture.
 
-    const renderer = new WebGPURenderer({
-        device,
-        glslang
-    });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(window.devicePixelRatio);
-    document.body.appendChild(renderer.domElement);
+// https://github.com/mrdoob/three.js/blob/dev/examples/jsm/renderers/webgpu/WebGPURenderPipelines.js#L781-L802
+// #version 450
+// 
+// layout(location = 0) in vec3 position;
+// layout(location = 1) in vec2 uv;
+// 
+// layout(location = 0) out vec2 vUv;
+// 
+// layout(set = 0, binding = 0) uniform ModelUniforms {
+//     mat4 modelMatrix;
+//     mat4 modelViewMatrix;
+//     mat3 normalMatrix;
+// } modelUniforms;
+// 
+// layout(set = 0, binding = 1) uniform CameraUniforms {
+//     mat4 projectionMatrix;
+//     mat4 viewMatrix;
+// } cameraUniforms;
+// 
+// void main(){
+//     vUv = uv;
+//     gl_Position = cameraUniforms.projectionMatrix * modelUniforms.modelViewMatrix * vec4( position, 1.0 );
+// }
+// 
 
-    const scene = new Scene();
+// https://github.com/mrdoob/three.js/blob/dev/examples/jsm/renderers/webgpu/WebGPURenderPipelines.js#L803-L817
+// #version 450
+// layout(set = 0, binding = 2) uniform OpacityUniforms {
+//     float opacity;
+// } opacityUniforms;
+// 
+// layout(set = 0, binding = 3) uniform sampler mySampler;
+// layout(set = 0, binding = 4) uniform texture2D myTexture;
+// 
+// layout(location = 0) in vec2 vUv;
+// layout(location = 0) out vec4 outColor;
+// 
+// void main() {
+//     outColor = texture( sampler2D( myTexture, mySampler ), vUv );
+//     outColor.a *= opacityUniforms.opacity;
+// }
 
-    const camera = new PerspectiveCamera(30, window.innerWidth / window.innerHeight, 0.1, 1000.0);
+let camera, scene, renderer;
+
+init().then( animate ).catch( error );
+
+async function init() {
+    scene = new THREE.Scene();
+
+    camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 0.1, 1000.0);
     camera.position.z = 3.0;
 
-    let material = new MeshBasicMaterial({ color: 0x0000ff });
-    //let material = new MeshBasicMaterial({vertexColors: VertexColors}); // TODO: VertexColors not yet supported
-    
+
     // Square data
     //             1.0 y 
     //              ^  -1.0 
@@ -47,63 +73,67 @@ const run = async () => {
     //         |  /     |
     //        [2]------[3]
     //
-    const vertexPositions = [
-        [-0.5, 0.5, 0.0], // v0
-        [ 0.5, 0.5, 0.0], // v1 
-        [-0.5,-0.5, 0.0], // v2
-        [ 0.5,-0.5, 0.0]  // v3
+    const vertices = [
+        -0.5, 0.5, 0.0,  // v0
+         0.5, 0.5, 0.0,  // v1 
+        -0.5,-0.5, 0.0,  // v2
+         0.5,-0.5, 0.0,  // v3
     ];
-
-    const vertices = new Float32Array(vertexPositions.length * 3);
-    for (let i = 0; i < vertexPositions.length; i++) {
-        vertices[i * 3 + 0] = vertexPositions[i][0];
-        vertices[i * 3 + 1] = vertexPositions[i][1];
-        vertices[i * 3 + 2] = vertexPositions[i][2];
-    }
-
-    const vertexColors = [
-        [1.0, 0.0, 0.0, 1.0], // v0
-        [0.0, 1.0, 0.0, 1.0], // v1
-        [0.0, 0.0, 1.0, 1.0], // v2
-        [1.0, 1.0, 0.0, 1.0]  // v3
+    const uvs = [
+         0.0, 1.0,
+         1.0, 1.0,
+         0.0, 0.0,
+         1.0, 0.0
     ];
+    const indices = [
+        0, 2, 1, 
+        2, 3, 1
+    ];
+    
+    const geometry = new THREE.BufferGeometry();
+    geometry.setIndex(indices);
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    geometry.setAttribute('normal', new THREE.Float32BufferAttribute(vertices, 3));
+    geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2)); // TODO: If you do not specify the uv attribute, an error occurs
 
-    const colors = new Float32Array(vertexColors.length * 4);
-    for (let i = 0; i < vertexColors.length; i++) {
-        colors[i * 4 + 0] = vertexColors[i][0];
-        colors[i * 4 + 1] = vertexColors[i][1];
-        colors[i * 4 + 2] = vertexColors[i][2];
-        colors[i * 4 + 3] = vertexColors[i][3];
-    }
-    
-    const indices = new Uint16Array([
-        2, 0, 1, // v2-v0-v1
-        2, 1, 3  // v2-v1-v3
-    ]);
-    
-    const geometry = new BufferGeometry();
-    geometry.setAttribute('position', new BufferAttribute(vertices, 3));
-    geometry.setAttribute('normal', new BufferAttribute(vertices, 3)); // TODO:
-    geometry.setAttribute('color', new BufferAttribute(colors, 4)); // TODO:
-    geometry.setIndex(new BufferAttribute(indices, 1));
-    
-    const mesh = new Mesh(geometry, material);
+    const material = new THREE.MeshBasicMaterial({ map: createDataTexture() }); // TODO: Not color supported yet
+    const mesh = new THREE.Mesh(geometry, material);
     scene.add(mesh);
 
-    const render = () => {
-        requestAnimationFrame(render);
-        renderer.render(scene, camera);
-    };
+    renderer = new WebGPURenderer();
+    renderer.setClearColor(0x000000);
+    renderer.setSize( window.innerWidth, window.innerHeight );
+    document.body.appendChild( renderer.domElement );
 
-    const onResize = event => {
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-    };
+    window.addEventListener( 'resize', onWindowResize, false );
 
-    window.addEventListener('resize', onResize, false);
+    return renderer.init();
+}
 
-    render();
-};
+function onWindowResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
 
-run();
+    renderer.setSize( window.innerWidth, window.innerHeight );
+}
+
+function animate() {
+    requestAnimationFrame( animate );
+    renderer.render( scene, camera );
+}
+
+function createDataTexture() {
+    const width = 4;
+    const height = 1;
+    const data = new Uint8Array([
+        255,   0,   0, 255,
+          0, 255,   0, 255,
+          0,   0, 255, 255,
+        255, 255,   0, 255,
+    ]);
+    return new THREE.DataTexture( data, width, height, THREE.RGBAFormat, undefined, undefined, undefined, undefined, THREE.LinearFilter, THREE.LinearFilter );
+}
+
+function error( error ) {
+    console.error( error );
+}
