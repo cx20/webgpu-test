@@ -46,9 +46,11 @@ const swapChain = context.configureSwapChain({
 const verticesData = geometry.vertices.data;
 const verticesBuffer = device.createBuffer({
     size: verticesData.byteLength,
-    usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST
+    usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+    mappedAtCreation: true
 });
-helpers.setSubData(verticesBuffer, 0, verticesData, device);
+new Float32Array(verticesBuffer.getMappedRange()).set(verticesData);
+verticesBuffer.unmap();
 
 const pipelineLayout = device.createPipelineLayout({ bindGroupLayouts: [] });
 const pipeline = device.createRenderPipeline({
@@ -65,7 +67,7 @@ const pipeline = device.createRenderPipeline({
         }),
         entryPoint: "main"
     },
-    primitiveTopology: "triangle-strip",
+    primitiveTopology: "triangle-list",
     rasterizationState: {
         cullMode: 'back',
     },

@@ -122,23 +122,30 @@ const swapChain = context.configureSwapChain({
 const verticesData = geometry.vertices.data;
 const verticesBuffer = device.createBuffer({
     size: verticesData.byteLength,
-    usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST
+    usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+    mappedAtCreation: true
 });
-helpers.setSubData(verticesBuffer, 0, verticesData, device);
+new Float32Array(verticesBuffer.getMappedRange()).set(verticesData);
+verticesBuffer.unmap();
 
 const colorsData = geometry.colors.data;
 const colorsBuffer = device.createBuffer({
     size: colorsData.byteLength,
-    usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST
+    usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+    mappedAtCreation: true
 });
-helpers.setSubData(colorsBuffer, 0, colorsData, device);
+new Float32Array(colorsBuffer.getMappedRange()).set(colorsData);
+colorsBuffer.unmap();
 
 const indicesData = geometry.indices.data;
 const indicesBuffer = device.createBuffer({
     size: indicesData.byteLength,
-    usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST
+    usage: GPUBufferUsage.INDEX,
+    mappedAtCreation: true
 });
-helpers.setSubData(indicesBuffer, 0, indicesData, device);
+new Uint16Array(indicesBuffer.getMappedRange()).set(indicesData);
+indicesBuffer.pointNum = indicesData.length;
+indicesBuffer.unmap();
 
 const uniformComponentCount = 16;
 const uniformBufferSize = uniformComponentCount * 4;
@@ -182,7 +189,8 @@ const pipeline = device.createRenderPipeline({
     },
     primitiveTopology: "triangle-list",
     rasterizationState: {
-        cullMode: 'back'
+        frontFace : "ccw",
+        cullMode: 'none'
     },
     colorStates: [
         {
@@ -231,14 +239,14 @@ function getModelMatrix(){
 
 function render() {
     renderPassDescriptor.colorAttachments[0].attachment = swapChain.getCurrentTexture().createView();
-    helpers.setSubData(uniformBuffer, 0, getModelMatrix(), device);
+    device.defaultQueue.writeBuffer(uniformBuffer, 0, getModelMatrix());
 
     const commandEncoder = device.createCommandEncoder({});
     const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
     passEncoder.setPipeline(pipeline);
     passEncoder.setVertexBuffer(0, verticesBuffer);
     passEncoder.setVertexBuffer(1, colorsBuffer);
-    passEncoder.setIndexBuffer(indicesBuffer);
+    passEncoder.setIndexBuffer(indicesBuffer, "uint16");
     passEncoder.setBindGroup(0, uniformBindGroup);
     passEncoder.drawIndexed(geometry.indices.count, 1, 0, 0, 0);
     passEncoder.endPass();
