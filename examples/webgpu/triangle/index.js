@@ -37,7 +37,6 @@ async function init(glslang) {
             entryPoint: "main"
         },
         vertexState: {
-            indexFormat: "uint32",
             vertexBuffers: [
                 {
                     arrayStride: 3 * 4,
