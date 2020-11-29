@@ -219,8 +219,7 @@ const pipeline = device.createRenderPipeline({
                 offset:  0,
                 format: "float4"
             }]
-        }],
-        indexFormat: 'uint16'
+        }]
     }
 });
 
