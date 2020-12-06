@@ -53,10 +53,6 @@ async function init() {
         scene.render();
     });
 
-    engine.runRenderLoop(function () {
-        scene.render();
-    });
-
     window.addEventListener('resize', function(){
         engine.resize();
     });
