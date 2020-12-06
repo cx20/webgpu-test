@@ -1,37 +1,33 @@
-var createScene = function(engine) {
-    var scene = new BABYLON.Scene(engine);
-    var camera = new BABYLON.FreeCamera("camera", new BABYLON.Vector3(0, 0, -2.4), scene);
-    scene.clearColor = new BABYLON.Color3(1, 1, 1);
-    var points = [];
-    points.push( new BABYLON.Vector3( 0.0,  0.5, 0.0 ) );
-    points.push( new BABYLON.Vector3(-0.5, -0.5, 0.0 ) );
-    points.push( new BABYLON.Vector3( 0.5, -0.5, 0.0 ) );
-    points.push( new BABYLON.Vector3( 0.0,  0.5, 0.0 ) );
-
-    var triangle = new BABYLON.Mesh.CreateLines('triangle', points, scene);
-    triangle.color = new BABYLON.Color3(0, 0, 1);
-
-    return scene;
-}
-
 async function init() {
-    try {
-        var canvas = document.querySelector("#renderCanvas");
-        var engine = new BABYLON.WebGPUEngine(canvas);
-        await engine.initAsync();
-        var scene = createScene(engine);
+    const canvas = document.querySelector("#c");
+    const engine = new BABYLON.WebGPUEngine(canvas);
+    await engine.initAsync();
 
-        engine.runRenderLoop(function () {
-            scene.render();
-        });
+    const createScene = function() {
+        const scene = new BABYLON.Scene(engine);
+        const camera = new BABYLON.FreeCamera("camera", new BABYLON.Vector3(0, 0, -2.4), scene);
+        scene.clearColor = new BABYLON.Color3(1, 1, 1);
+        const points = [];
+        points.push( new BABYLON.Vector3( 0.0,  0.5, 0.0 ) );
+        points.push( new BABYLON.Vector3(-0.5, -0.5, 0.0 ) );
+        points.push( new BABYLON.Vector3( 0.5, -0.5, 0.0 ) );
+        points.push( new BABYLON.Vector3( 0.0,  0.5, 0.0 ) );
 
-        window.addEventListener('resize', function(){
-            engine.resize();
-        });
+        const triangle = new BABYLON.Mesh.CreateLines('triangle', points, scene);
+        triangle.color = new BABYLON.Color3(0, 0, 1);
+
+        return scene;
     }
-    catch (e) {
-        console.error(e);
-    }
+
+    const scene = createScene();
+
+    engine.runRenderLoop(function () {
+        scene.render();
+    });
+
+    window.addEventListener('resize', function(){
+        engine.resize();
+    });
 }
 
 init();
