@@ -1,6 +1,7 @@
 async function init() {
     const canvas = document.querySelector("#c");
-    const engine = new BABYLON.Engine(canvas, true);
+    const engine = new BABYLON.WebGPUEngine(canvas);
+    await engine.initAsync();
 
     let plane;
     let cube;
