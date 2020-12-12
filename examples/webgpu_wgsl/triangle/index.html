@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>[WebGPU][WGSL] Testing Triangle Using WebGPU</title>
+  <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+<body>
+<script id="vs" type="x-shader/x-vertex">
+[[location(0)]] var<in> position : vec3<f32>;
+[[builtin(position)]] var<out> Position : vec4<f32>;
+
+[[stage(vertex)]]
+fn main() -> void {
+    Position = vec4<f32>(position, 1.0);
+    return;
+}
+</script>
+
+<script id="fs" type="x-shader/x-fragment">
+[[location(0)]] var<out> outColor : vec4<f32>;
+
+[[stage(fragment)]]
+fn main() -> void {
+    outColor = vec4<f32>(0.0, 0.0, 1.0, 1.0);
+    return;
+}
+</script>
+<canvas id="c" width="465" height="465"></canvas>
+<script src="index.js"></script>
+</body>
+</html>
