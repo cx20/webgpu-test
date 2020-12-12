@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>[WebGPU][WGSL] Testing Teapot Using WebGPU</title>
+  <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+<body>
+<script src="../../../libs/gl-matrix.js"></script>
+<script src="//code.jquery.com/jquery-3.4.0.js"></script>
+<script id="vs" type="x-shader/x-vertex">
+[[block]] struct Uniforms {
+    [[offset(0)]] modelViewProjectionMatrix : mat4x4<f32>;
+};
+[[binding(0), set(0)]] var<uniform> uniforms : Uniforms;
+
+[[location(0)]] var<in> position : vec3<f32>;
+[[location(1)]] var<in> normal : vec3<f32>;
+[[location(2)]] var<in> textureCoord : vec2<f32>;
+[[location(0)]] var<out> vPosition: vec4<f32>;
+[[location(1)]] var<out> vNormal: vec3<f32>;
+[[location(2)]] var<out> vTextureCoord : vec2<f32>;
+[[builtin(position)]] var<out> Position : vec4<f32>;
+
+[[stage(vertex)]]
+fn main() -> void {
+    vPosition = uniforms.modelViewProjectionMatrix * vec4<f32>(position, 1.0);
+    vNormal = normal;
+    vTextureCoord = textureCoord;
+    Position = uniforms.modelViewProjectionMatrix * vec4<f32>(position, 1.0);
+    return;
+}
+</script>
+
+<script id="fs" type="x-shader/x-fragment">
+[[binding(1), set(0)]] var<uniform_constant> mySampler: sampler;
+[[binding(2), set(0)]] var<uniform_constant> myTexture: texture_sampled_2d<f32>;
+[[block]] struct Uniforms {
+    [[offset(0)]] pointLightingLocation : vec3<f32>;
+};
+[[binding(3), set(0)]] var<uniform> uniforms : Uniforms;
+
+[[location(0)]] var<in> vPosition: vec4<f32>;
+[[location(1)]] var<in> vNormal: vec3<f32>;
+[[location(2)]] var<in> vTextureCoord: vec2<f32>;
+[[location(0)]] var<out> outColor : vec4<f32>;
+
+[[stage(fragment)]]
+fn main() -> void {
+    var lightDirection: vec3<f32> = normalize(uniforms.pointLightingLocation - vPosition.xyz);
+    var normal: vec3<f32> = normalize(vNormal);
+    var lightWeighting: f32 = max(dot(normal, lightDirection), 0.0);
+    var fragmentColor: vec4<f32> =  textureSample(myTexture, mySampler, vTextureCoord);
+    outColor = vec4<f32>(fragmentColor.rgb * lightWeighting, fragmentColor.a);
+    return;
+}
+</script>
+<canvas id="c" width="465" height="465"></canvas>
+<script src="index.js"></script>
+</body>
+</html>
