@@ -15,12 +15,10 @@
 [[location(0)]] var<in> position : vec3<f32>;
 [[location(1)]] var<in> textureCoord : vec2<f32>;
 [[location(0)]] var<out> vTextureCoord : vec2<f32>;
-[[location(1)]] var<out> fragPosition: vec4<f32>;
 [[builtin(position)]] var<out> Position : vec4<f32>;
 
 [[stage(vertex)]]
 fn main() -> void {
-    fragPosition =  0.5 * (vec4<f32>(position, 1.0) + vec4<f32>(1.0, 1.0, 1.0, 1.0));
     vTextureCoord = textureCoord;
     Position = uniforms.modelViewProjectionMatrix * vec4<f32>(position, 1.0);
     return;
@@ -33,12 +31,11 @@ fn main() -> void {
 [[binding(2), set(0)]] var<uniform_constant> myTexture: texture_sampled_2d<f32>;
 
 [[location(0)]] var<in> vTextureCoord: vec2<f32>;
-[[location(1)]] var<in> fragPosition: vec4<f32>;
 [[location(0)]] var<out> outColor : vec4<f32>;
 
 [[stage(fragment)]]
 fn main() -> void {
-    outColor =  textureSample(myTexture, mySampler, vTextureCoord) * fragPosition;
+    outColor =  textureSample(myTexture, mySampler, vTextureCoord);
     return;
 }
 
