@@ -80,7 +80,7 @@ async function init(glslang) {
         passEncoder.setPipeline(pipeline);
         passEncoder.draw(3, 1, 0, 0);
         passEncoder.endPass();
-        device.defaultQueue.submit([commandEncoder.finish()]);
+        device.queue.submit([commandEncoder.finish()]);
         requestAnimationFrame(render)
     }
     requestAnimationFrame(render)

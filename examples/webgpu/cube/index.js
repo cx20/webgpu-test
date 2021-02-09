@@ -204,7 +204,7 @@ async function init(glslang) {
             depth: 1
         },
         format: "depth24plus-stencil8",
-        usage: GPUTextureUsage.OUTPUT_ATTACHMENT
+        usage: GPUTextureUsage.RENDER_ATTACHMENT
     });
     let render =  function () {
         const commandEncoder = device.createCommandEncoder();
@@ -231,7 +231,7 @@ async function init(glslang) {
         passEncoder.setBindGroup(0, uniformBindGroup);
         passEncoder.drawIndexed(indexBuffer.pointNum, 1, 0, 0, 0);
         passEncoder.endPass();
-        device.defaultQueue.submit([commandEncoder.finish()]);
+        device.queue.submit([commandEncoder.finish()]);
         uploadBuffer.destroy();
         requestAnimationFrame(render);
     }
