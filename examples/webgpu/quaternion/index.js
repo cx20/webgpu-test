@@ -284,7 +284,7 @@ async function init(glslang) {
             depth: 1
         },
         format: "depth24plus-stencil8",
-        usage: GPUTextureUsage.OUTPUT_ATTACHMENT
+        usage: GPUTextureUsage.RENDER_ATTACHMENT
     });
 
     let render =  function () {
@@ -323,7 +323,7 @@ async function init(glslang) {
 
         passEncoder.endPass();
 
-        device.defaultQueue.submit([commandEncoder.finish()]);
+        device.queue.submit([commandEncoder.finish()]);
         buffer1.destroy();
         buffer2.destroy();
         requestAnimationFrame(render);
@@ -452,7 +452,7 @@ async function createTextureFromImage(device, src, usage) {
         depth: 1,
     });
 
-    device.defaultQueue.submit([commandEncoder.finish()]);
+    device.queue.submit([commandEncoder.finish()]);
     textureDataBuffer.destroy();
 
     return texture;
