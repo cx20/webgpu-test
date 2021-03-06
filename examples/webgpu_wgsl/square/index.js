@@ -69,7 +69,7 @@ async function init() {
                             // position
                             shaderLocation: 0,
                             offset: 0,
-                            format: "float3"
+                            format: "float32x3"
                         },
                     ]
                 },

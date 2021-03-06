@@ -158,7 +158,7 @@ async function init(glslang) {
                             // position
                             shaderLocation: 0,
                             offset: 0,
-                            format: "float3"
+                            format: "float32x3"
                         }
                     ]
                 },
@@ -169,7 +169,7 @@ async function init(glslang) {
                             // textureCoord
                             shaderLocation: 1,
                             offset:  0,
-                            format: "float2"
+                            format: "float32x2"
                         }
                     ]
                 }
@@ -280,7 +280,7 @@ async function init(glslang) {
         size: {
             width: c.width,
             height: c.height,
-            depth: 1
+            depthOrArrayLayers: 1
         },
         format: "depth24plus-stencil8",
         usage: GPUTextureUsage.RENDER_ATTACHMENT
@@ -424,7 +424,7 @@ async function createTextureFromImage(device, src, usage) {
         size: {
             width: img.width,
             height: img.height,
-            depth: 1,
+            depthOrArrayLayers: 1,
         },
         format: "rgba8unorm",
         usage: GPUTextureUsage.COPY_DST | usage,
@@ -447,7 +447,7 @@ async function createTextureFromImage(device, src, usage) {
     }, {
         width: img.width,
         height: img.height,
-        depth: 1,
+        depthOrArrayLayers: 1,
     });
 
     device.queue.submit([commandEncoder.finish()]);
