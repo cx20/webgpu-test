@@ -127,7 +127,7 @@ async function init(glslang) {
                             // position
                             shaderLocation: 0,
                             offset: 0,
-                            format: "float3"
+                            format: "float32x3"
                         }
                     ]
                 },
@@ -201,7 +201,7 @@ async function init(glslang) {
         size: {
             width: c.width,
             height: c.height,
-            depth: 1
+            depthOrArrayLayers:: 1
         },
         format: "depth24plus-stencil8",
         usage: GPUTextureUsage.RENDER_ATTACHMENT
