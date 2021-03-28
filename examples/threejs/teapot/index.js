@@ -1,5 +1,5 @@
-import * as THREE from 'https://raw.githack.com/mrdoob/three.js/r125/build/three.module.js';
-import WebGPURenderer from 'https://raw.githack.com/mrdoob/three.js/r125/examples/jsm/renderers/webgpu/WebGPURenderer.js';
+import * as THREE from 'https://raw.githack.com/mrdoob/three.js/r126/build/three.module.js';
+import WebGPURenderer from 'https://raw.githack.com/mrdoob/three.js/r126/examples/jsm/renderers/webgpu/WebGPURenderer.js';
 
 // NOTE: The shader currently used in the WebGPU Renderer's MeshBasicMaterial is the following code.
 //       Please note that you cannot specify the color because you are using a texture.
