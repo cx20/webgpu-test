@@ -52,17 +52,10 @@ async function init(glslang) {
 
     const pipeline = device.createRenderPipeline({
         layout: device.createPipelineLayout({bindGroupLayouts: []}),
-        vertexStage: {
+        vertex: {
             module: vShaderModule,
-            entryPoint: "main"
-        },
-        fragmentStage: {
-            module: fShaderModule,
-            entryPoint: "main"
-        },
-        vertexState: {
-            indexFormat: "uint32",
-            vertexBuffers: [
+            entryPoint: "main",
+            buffers: [
                 {
                     arrayStride: 3 * 4,
                     attributes: [
@@ -81,25 +74,32 @@ async function init(glslang) {
                             // color
                             shaderLocation: 1,
                             offset:  0,
-                            format: "float4"
+                            format: "float32x4"
                         }
                     ]
                 }
             ]
         },
-        colorStates: [
-            {
-                format: swapChainFormat,
-                alphaBlend: {
-                    srcFactor: "src-alpha",
-                    dstFactor: "one-minus-src-alpha",
-                    operation: "add"
+        fragment: {
+            module: fShaderModule,
+            entryPoint: "main",
+            targets: [
+                {
+                    format: swapChainFormat,
+                    alpha: {
+                        srcFactor: "src-alpha",
+                        dstFactor: "one-minus-src-alpha",
+                        operation: "add"
+                    }
                 }
-            }
-        ],
-        primitiveTopology: "triangle-strip",
-        frontFace : "ccw",
-        cullMode : "none"
+            ],
+        },
+        primitive: {
+            topology: "triangle-strip",
+            stripIndexFormat: "uint32",
+            frontFace : "ccw",
+            cullMode : "none"
+        },
     });
 
     let render =  function () {

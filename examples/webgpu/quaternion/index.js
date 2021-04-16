@@ -126,32 +126,32 @@ async function init(glslang) {
         entries: [{
             binding: 0,
             visibility: GPUShaderStage.VERTEX,
-            type: "uniform-buffer"
+            buffer: {
+                type: 'uniform',
+            },
         }, {
-          // Sampler
-          binding: 1,
-          visibility: GPUShaderStage.FRAGMENT,
-          type: "sampler"
+            // Sampler
+            binding: 1,
+            visibility: GPUShaderStage.FRAGMENT,
+            sampler: {
+                type: 'filtering',
+            },
         }, {
-          // Texture view
-          binding: 2,
-          visibility: GPUShaderStage.FRAGMENT,
-          type: "sampled-texture"
+            // Texture view
+            binding: 2,
+            visibility: GPUShaderStage.FRAGMENT,
+            texture: {
+                sampleType: 'float',
+            },
         }]
     });
     const pipelineLayout = device.createPipelineLayout({ bindGroupLayouts: [uniformsBindGroupLayout] });
     const pipeline = device.createRenderPipeline({
         layout: pipelineLayout,
-        vertexStage: {
+        vertex: {
             module: vShaderModule,
-            entryPoint: "main"
-        },
-        fragmentStage: {
-            module: fShaderModule,
-            entryPoint: "main"
-        },
-        vertexState: {
-            vertexBuffers: [
+            entryPoint: "main",
+            buffers: [
                 {
                     arrayStride: 3 * 4,
                     attributes: [
@@ -176,22 +176,26 @@ async function init(glslang) {
                 }
             ]
         },
-        colorStates: [
-            {
-                format: swapChainFormat,
-                alphaBlend: {
-                    srcFactor: "src-alpha",
-                    dstFactor: "one-minus-src-alpha",
-                    operation: "add"
+        fragment: {
+            module: fShaderModule,
+            entryPoint: "main",
+            targets: [
+                {
+                    format: swapChainFormat,
+                    alpha: {
+                        srcFactor: "src-alpha",
+                        dstFactor: "one-minus-src-alpha",
+                        operation: "add"
+                    }
                 }
-            }
-        ],
-        primitiveTopology: "triangle-list",
-        rasterizationState: {
+            ],
+        },
+        primitive: {
+            topology: "triangle-list",
             frontFace : "ccw",
             cullMode : "none"
         },
-        depthStencilState: {
+        depthStencil: {
             depthWriteEnabled: true,
             depthCompare: "less",
             format: "depth24plus-stencil8",
@@ -281,7 +285,7 @@ async function init(glslang) {
         size: {
             width: c.width,
             height: c.height,
-            depthOrArrayLayers:: 1
+            depthOrArrayLayers: 1
         },
         format: "depth24plus-stencil8",
         usage: GPUTextureUsage.RENDER_ATTACHMENT
@@ -426,7 +430,7 @@ async function createTextureFromImage(device, src, usage) {
         size: {
             width: img.width,
             height: img.height,
-            depthOrArrayLayers:: 1,
+            depthOrArrayLayers: 1,
         },
         format: "rgba8unorm",
         usage: GPUTextureUsage.COPY_DST | usage,
@@ -449,7 +453,7 @@ async function createTextureFromImage(device, src, usage) {
     }, {
         width: img.width,
         height: img.height,
-        depthOrArrayLayers:: 1,
+        depthOrArrayLayers: 1,
     });
 
     device.queue.submit([commandEncoder.finish()]);

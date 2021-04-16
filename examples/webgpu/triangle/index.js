@@ -28,16 +28,10 @@ async function init(glslang) {
 
     const pipeline = device.createRenderPipeline({
         layout: device.createPipelineLayout({bindGroupLayouts: []}),
-        vertexStage: {
+        vertex: {
             module: vShaderModule,
-            entryPoint: "main"
-        },
-        fragmentStage: {
-            module: fShaderModule,
-            entryPoint: "main"
-        },
-        vertexState: {
-            vertexBuffers: [
+            entryPoint: "main",
+            buffers: [
                 {
                     arrayStride: 3 * 4,
                     attributes: [
@@ -51,19 +45,25 @@ async function init(glslang) {
                 }
             ]
         },
-        colorStates: [
-            {
-                format: swapChainFormat,
-                alphaBlend: {
-                    srcFactor: "src-alpha",
-                    dstFactor: "one-minus-src-alpha",
-                    operation: "add"
+        fragment: {
+            module: fShaderModule,
+            entryPoint: "main",
+            targets: [
+                {
+                    format: swapChainFormat,
+                    alpha: {
+                        srcFactor: "src-alpha",
+                        dstFactor: "one-minus-src-alpha",
+                        operation: "add"
+                    }
                 }
-            }
-        ],
-        primitiveTopology: "triangle-list",
-        frontFace : "ccw",
-        cullMode : "none"
+            ],
+        },
+        primitive: {
+           topology: "triangle-list",
+           frontFace : "ccw",
+           cullMode : "none"
+        },
     });
 
     let render =  function () {

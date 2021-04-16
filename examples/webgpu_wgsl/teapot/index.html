@@ -32,8 +32,8 @@ fn main() -> void {
 </script>
 
 <script id="fs" type="x-shader/x-fragment">
-[[binding(1), set(0)]] var<uniform_constant> mySampler: sampler;
-[[binding(2), set(0)]] var<uniform_constant> myTexture: texture_2d<f32>;
+[[binding(1), set(0)]] var mySampler: sampler;
+[[binding(2), set(0)]] var myTexture: texture_2d<f32>;
 [[block]] struct Uniforms {
     [[offset(0)]] pointLightingLocation : vec3<f32>;
 };
