@@ -70,7 +70,7 @@ async function init() {
         const textureView = swapChain.getCurrentTexture().createView();
         const renderPassDescriptor = {
             colorAttachments: [{
-                attachment: textureView,
+                view: textureView,
                 loadValue: {r: 1, g: 1, b: 1, a: 1},
             }]
         };

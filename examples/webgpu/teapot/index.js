@@ -202,11 +202,11 @@ async function init(glslang) {
         const textureView = swapChain.getCurrentTexture().createView();
         const renderPassDescriptor = {
             colorAttachments: [{
-                attachment: textureView,
+                view: textureView,
                 loadValue: {r: 0, g: 0, b: 0, a: 0},
             }],
             depthStencilAttachment: {
-                attachment: depthTexture.createView(),
+                view: depthTexture.createView(),
                 depthLoadValue: 1.0,
                 depthStoreOp: "store",
                 stencilLoadValue: 0,
