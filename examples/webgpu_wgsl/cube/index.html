@@ -7,52 +7,45 @@
 <body>
 <script src="../../../libs/gl-matrix.js"></script>
 <script id="vs" type="x-shader/x-vertex">
-// #version 450
-// layout(set = 0, binding = 0) uniform Uniforms {
-//     mat4 modelViewProjectionMatrix;
-// } uniforms;
-// 
-// layout(location = 0) in vec3 position;
-// layout(location = 1) in vec4 color;
-// layout(location = 0) out vec4 vColor;
-// void main() {
-//     vColor = color;
-//     gl_Position = uniforms.modelViewProjectionMatrix * vec4(position, 1.0);
-// }
-
 [[block]] struct Uniforms {
     [[offset(0)]] modelViewProjectionMatrix : mat4x4<f32>;
 };
 [[binding(0), set(0)]] var<uniform> uniforms : Uniforms;
 
-[[location(0)]] var<in> position : vec3<f32>;
-[[location(1)]] var<in> color : vec4<f32>;
-[[builtin(position)]] var<out> Position : vec4<f32>;
-[[location(0)]] var<out> fragColor : vec4<f32>;
+struct VertexInput {
+    [[location(0)]] position : vec3<f32>;
+    [[location(1)]] color : vec4<f32>;
+};
+
+struct VertexOutput {
+    [[builtin(position)]] Position : vec4<f32>;
+    [[location(0)]] fragColor : vec4<f32>;
+};
 
 [[stage(vertex)]]
-fn main() -> void {
-    fragColor = color;
-    Position = uniforms.modelViewProjectionMatrix * vec4<f32>(position, 1.0);
-    return;
+fn main(input : VertexInput) -> VertexOutput {
+    var output : VertexOutput;
+    output.fragColor = input.color;
+    output.Position = uniforms.modelViewProjectionMatrix * vec4<f32>(input.position, 1.0);
+    return output;
 }
 
 </script>
 
 <script id="fs" type="x-shader/x-fragment">
-// #version 450
-// layout(location = 0) in vec4 vColor;
-// layout(location = 0) out vec4 outColor;
-// void main() {
-//     outColor = vColor;
-// }
-[[location(0)]] var<in> fragColor : vec4<f32>;
-[[location(0)]] var<out> outColor : vec4<f32>;
+struct FragmentInput {
+    [[location(0)]] fragColor : vec4<f32>;
+};
+
+struct FragmentOutput {
+    [[location(0)]] outColor : vec4<f32>;
+};
 
 [[stage(fragment)]]
-fn main() -> void {
-    outColor = fragColor;
-    return;
+fn main(input : FragmentInput) -> FragmentOutput {
+    var output : FragmentOutput;
+    output.outColor = input.fragColor;
+    return output;
 }
 </script>
 <canvas id="c" width="465" height="465"></canvas>

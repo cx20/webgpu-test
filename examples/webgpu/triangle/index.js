@@ -27,7 +27,6 @@ async function init(glslang) {
     let vertexBuffer = makeVertexBuffer(device, new Float32Array(positions));
 
     const pipeline = device.createRenderPipeline({
-        layout: device.createPipelineLayout({bindGroupLayouts: []}),
         vertex: {
             module: vShaderModule,
             entryPoint: "main",
@@ -50,20 +49,13 @@ async function init(glslang) {
             entryPoint: "main",
             targets: [
                 {
-                    format: swapChainFormat,
-                    alpha: {
-                        srcFactor: "src-alpha",
-                        dstFactor: "one-minus-src-alpha",
-                        operation: "add"
-                    }
+                    format: swapChainFormat
                 }
-            ],
+            ]
         },
         primitive: {
-           topology: "triangle-list",
-           frontFace : "ccw",
-           cullMode : "none"
-        },
+           topology: "triangle-list"
+        }
     });
 
     let render =  function () {
@@ -76,15 +68,14 @@ async function init(glslang) {
             }]
         };
         const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
-        passEncoder.setVertexBuffer(0, vertexBuffer);
         passEncoder.setPipeline(pipeline);
+        passEncoder.setVertexBuffer(0, vertexBuffer);
         passEncoder.draw(3, 1, 0, 0);
         passEncoder.endPass();
         device.queue.submit([commandEncoder.finish()]);
-        requestAnimationFrame(render)
+        requestAnimationFrame(render);
     }
-    requestAnimationFrame(render)
-
+    requestAnimationFrame(render);
 }
 
 function configureSwapChain(device, swapChainFormat, context) {
