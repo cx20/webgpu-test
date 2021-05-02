@@ -51,7 +51,6 @@ async function init(glslang) {
     let colorBuffer = makeVertexBuffer(device, new Float32Array(colors));
 
     const pipeline = device.createRenderPipeline({
-        layout: device.createPipelineLayout({bindGroupLayouts: []}),
         vertex: {
             module: vShaderModule,
             entryPoint: "main",
@@ -85,20 +84,13 @@ async function init(glslang) {
             entryPoint: "main",
             targets: [
                 {
-                    format: swapChainFormat,
-                    alpha: {
-                        srcFactor: "src-alpha",
-                        dstFactor: "one-minus-src-alpha",
-                        operation: "add"
-                    }
+                    format: swapChainFormat
                 }
-            ],
+            ]
         },
         primitive: {
             topology: "triangle-strip",
-            stripIndexFormat: "uint32",
-            frontFace : "ccw",
-            cullMode : "none"
+            stripIndexFormat: "uint32"
         },
     });
 
@@ -118,9 +110,9 @@ async function init(glslang) {
         passEncoder.draw(4, 1, 0, 0);
         passEncoder.endPass();
         device.queue.submit([commandEncoder.finish()]);
-        requestAnimationFrame(render)
+        requestAnimationFrame(render);
     }
-    requestAnimationFrame(render)
+    requestAnimationFrame(render);
 
 }
 

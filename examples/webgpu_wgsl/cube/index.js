@@ -144,24 +144,17 @@ async function init() {
             entryPoint: "main",
             targets: [
                 {
-                    format: swapChainFormat,
-                    alpha: {
-                        srcFactor: "src-alpha",
-                        dstFactor: "one-minus-src-alpha",
-                        operation: "add"
-                    }
+                    format: swapChainFormat
                 }
-            ],
+            ]
         },
         primitive: {
-            topology: "triangle-list",
-            frontFace : "ccw",
-            cullMode : "none"
+            topology: "triangle-list"
         },
         depthStencil: {
             depthWriteEnabled: true,
             depthCompare: "less",
-            format: "depth24plus-stencil8",
+            format: "depth24plus-stencil8"
         }
     });
 
@@ -205,6 +198,7 @@ async function init() {
         format: "depth24plus-stencil8",
         usage: GPUTextureUsage.RENDER_ATTACHMENT
     });
+    
     let render =  function () {
         const commandEncoder = device.createCommandEncoder();
         const { uploadBuffer } = updateBufferData(device, uniformBuffer, 0, getTransformationMatrix(), commandEncoder);
@@ -234,7 +228,7 @@ async function init() {
         uploadBuffer.destroy();
         requestAnimationFrame(render);
     }
-    requestAnimationFrame(render)
+    requestAnimationFrame(render);
 }
 
 function configureSwapChain(device, swapChainFormat, context) {

@@ -181,24 +181,17 @@ async function init(glslang) {
             entryPoint: "main",
             targets: [
                 {
-                    format: swapChainFormat,
-                    alpha: {
-                        srcFactor: "src-alpha",
-                        dstFactor: "one-minus-src-alpha",
-                        operation: "add"
-                    }
+                    format: swapChainFormat
                 }
-            ],
+            ]
         },
         primitive: {
-            topology: "triangle-list",
-            frontFace : "ccw",
-            cullMode : "none"
+            topology: "triangle-list"
         },
         depthStencil: {
             depthWriteEnabled: true,
             depthCompare: "less",
-            format: "depth24plus-stencil8",
+            format: "depth24plus-stencil8"
         }
     });
 
@@ -258,7 +251,6 @@ async function init(glslang) {
     });
 
     let render =  function () {
-
         const commandEncoder = device.createCommandEncoder();
         const { uploadBuffer } = updateBufferData(device, uniformBuffer, 0, getTransformationMatrix(), commandEncoder);
         const textureView = swapChain.getCurrentTexture().createView();
@@ -287,7 +279,7 @@ async function init(glslang) {
         uploadBuffer.destroy();
         requestAnimationFrame(render);
     }
-    requestAnimationFrame(render)
+    requestAnimationFrame(render);
 }
 
 function configureSwapChain(device, swapChainFormat, context) {
@@ -350,69 +342,17 @@ async function createTextureFromImage(device, src, usage) {
     const img = document.createElement("img");
     img.src = src;
     await img.decode();
+    const imageBitmap = await createImageBitmap(img);
 
-    const imageCanvas = document.createElement("canvas");
-    imageCanvas.width = img.width;
-    imageCanvas.height = img.height;
-
-    const imageCanvasContext = imageCanvas.getContext("2d");
-    imageCanvasContext.translate(0, img.height);
-    imageCanvasContext.scale(1, -1);
-    imageCanvasContext.drawImage(img, 0, 0, img.width, img.height);
-    const imageData = imageCanvasContext.getImageData(0, 0, img.width, img.height);
-
-    let data = null;
-
-    const bytesPerRow = Math.ceil(img.width * 4 / 256) * 256;
-    if (bytesPerRow == img.width * 4) {
-        data = imageData.data;
-    } else {
-        data = new Uint8Array(bytesPerRow * img.height);
-        let imagePixelIndex = 0;
-        for (let y = 0; y < img.height; ++y) {
-            for (let x = 0; x < img.width; ++x) {
-                let i = x * 4 + y * bytesPerRow;
-                data[i] = imageData.data[imagePixelIndex];
-                data[i + 1] = imageData.data[imagePixelIndex + 1];
-                data[i + 2] = imageData.data[imagePixelIndex + 2];
-                data[i + 3] = imageData.data[imagePixelIndex + 3];
-                imagePixelIndex += 4;
-            }
-        }
-    }
-
-    const texture = device.createTexture({
-        size: {
-            width: img.width,
-            height: img.height,
-            depthOrArrayLayers: 1,
-        },
-        format: "rgba8unorm",
-        usage: GPUTextureUsage.COPY_DST | usage,
+    cubeTexture = device.createTexture({
+      size: [imageBitmap.width, imageBitmap.height, 1],
+      format: 'rgba8unorm',
+      usage: usage | GPUTextureUsage.COPY_DST,
     });
-
-    const textureDataBuffer = device.createBuffer({
-        size: data.byteLength,
-        usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
-        mappedAtCreation: true
-    });
-    new Uint8Array(textureDataBuffer.getMappedRange()).set(data);
-    textureDataBuffer.unmap();
-
-    const commandEncoder = device.createCommandEncoder({});
-    commandEncoder.copyBufferToTexture({
-        buffer: textureDataBuffer,
-        bytesPerRow,
-    }, {
-        texture: texture,
-    }, {
-        width: img.width,
-        height: img.height,
-        depthOrArrayLayers: 1,
-    });
-
-    device.queue.submit([commandEncoder.finish()]);
-    textureDataBuffer.destroy();
-
-    return texture;
+    device.queue.copyImageBitmapToTexture(
+      { imageBitmap },
+      { texture: cubeTexture },
+      [imageBitmap.width, imageBitmap.height, 1]
+    );
+    return cubeTexture;
 }
