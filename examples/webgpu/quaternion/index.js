@@ -294,13 +294,14 @@ async function init(glslang) {
             colorAttachments: [{
                 view: textureView,
                 loadValue: {r: 1, g: 1, b: 1, a: 1},
+                storeOp: "store"
             }],
             depthStencilAttachment: {
                 view: depthTexture.createView(),
                 depthLoadValue: 1.0,
                 depthStoreOp: "store",
                 stencilLoadValue: 0,
-                stencilStoreOp: "store",
+                stencilStoreOp: "store"
             }
         };
         const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
