@@ -101,6 +101,7 @@ async function init(glslang) {
             colorAttachments: [{
                 view: textureView,
                 loadValue: {r: 1, g: 1, b: 1, a: 1},
+                storeOp: "store"
             }]
         };
         const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
