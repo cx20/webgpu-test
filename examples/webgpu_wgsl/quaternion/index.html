@@ -32,11 +32,11 @@ fn main(input : VertexInput) -> VertexOutput {
 </script>
 
 <script id="fs" type="x-shader/x-fragment">
-[[binding(1), set(0)]] var mySampler: sampler;
-[[binding(2), set(0)]] var myTexture: texture_2d<f32>;
+[[binding(1), set(0)]] var mySampler : sampler;
+[[binding(2), set(0)]] var myTexture : texture_2d<f32>;
 
 struct FragmentInput {
-    [[location(0)]] vTextureCoord: vec2<f32>;
+    [[location(0)]] vTextureCoord : vec2<f32>;
 };
 
 struct FragmentOutput {

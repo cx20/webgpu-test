@@ -126,22 +126,22 @@ async function init() {
             binding: 0,
             visibility: GPUShaderStage.VERTEX,
             buffer: {
-                type: 'uniform',
-            },
+                type: 'uniform'
+            }
         }, {
             // Sampler
             binding: 1,
             visibility: GPUShaderStage.FRAGMENT,
             sampler: {
-                type: 'filtering',
-            },
+                type: 'filtering'
+            }
         }, {
             // Texture view
             binding: 2,
             visibility: GPUShaderStage.FRAGMENT,
             texture: {
-                sampleType: 'float',
-            },
+                sampleType: 'float'
+            }
         }]
     });
     const pipelineLayout = device.createPipelineLayout({ bindGroupLayouts: [uniformsBindGroupLayout] });

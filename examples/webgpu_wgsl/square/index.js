@@ -62,7 +62,7 @@ async function init() {
                             shaderLocation: 0,
                             offset: 0,
                             format: "float32x3"
-                        },
+                        }
                     ]
                 },
                 {
@@ -93,7 +93,7 @@ async function init() {
         },
     });
 
-    let render =  function () {
+    let render = function () {
         const commandEncoder = device.createCommandEncoder();
         const textureView = swapChain.getCurrentTexture().createView();
         const renderPassDescriptor = {

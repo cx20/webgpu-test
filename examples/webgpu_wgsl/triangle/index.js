@@ -57,7 +57,7 @@ async function init() {
         }
     });
 
-    let render =  function () {
+    let render = function () {
         const commandEncoder = device.createCommandEncoder();
         const textureView = swapChain.getCurrentTexture().createView();
         const renderPassDescriptor = {

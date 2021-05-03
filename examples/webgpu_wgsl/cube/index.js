@@ -104,8 +104,8 @@ async function init() {
             binding: 0,
             visibility: GPUShaderStage.VERTEX,
             buffer: {
-                type: 'uniform',
-            },
+                type: 'uniform'
+            }
         }]
     });
     const pipelineLayout = device.createPipelineLayout({ bindGroupLayouts: [uniformsBindGroupLayout] });
@@ -199,7 +199,7 @@ async function init() {
         usage: GPUTextureUsage.RENDER_ATTACHMENT
     });
     
-    let render =  function () {
+    let render = function () {
         const commandEncoder = device.createCommandEncoder();
         const { uploadBuffer } = updateBufferData(device, uniformBuffer, 0, getTransformationMatrix(), commandEncoder);
         const textureView = swapChain.getCurrentTexture().createView();

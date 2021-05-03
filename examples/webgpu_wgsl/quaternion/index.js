@@ -126,22 +126,22 @@ async function init(glslang) {
             binding: 0,
             visibility: GPUShaderStage.VERTEX,
             buffer: {
-                type: 'uniform',
-            },
+                type: 'uniform'
+            }
         }, {
             // Sampler
             binding: 1,
             visibility: GPUShaderStage.FRAGMENT,
             sampler: {
-                type: 'filtering',
-            },
+                type: 'filtering'
+            }
         }, {
             // Texture view
             binding: 2,
             visibility: GPUShaderStage.FRAGMENT,
             texture: {
-                sampleType: 'float',
-            },
+                sampleType: 'float'
+            }
         }]
     });
     const pipelineLayout = device.createPipelineLayout({ bindGroupLayouts: [uniformsBindGroupLayout] });
@@ -283,7 +283,7 @@ async function init(glslang) {
         usage: GPUTextureUsage.RENDER_ATTACHMENT
     });
 
-    let render =  function () {
+    let render = function () {
         const commandEncoder = device.createCommandEncoder();
         const { uploadBuffer: buffer1 } = updateBufferData(device, uniformBuffer, 0, getTransformationMatrix1(), commandEncoder);
         const { uploadBuffer: buffer2 } = updateBufferData(device, uniformBuffer, offset, getTransformationMatrix2(), commandEncoder);

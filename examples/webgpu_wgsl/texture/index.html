@@ -32,11 +32,11 @@ fn main(input : VertexInput) -> VertexOutput {
 </script>
 
 <script id="fs" type="x-shader/x-fragment">
-[[binding(1), set(0)]] var mySampler: sampler;
-[[binding(2), set(0)]] var myTexture: texture_2d<f32>;
+[[binding(1), set(0)]] var mySampler : sampler;
+[[binding(2), set(0)]] var myTexture : texture_2d<f32>;
 
 struct FragmentInput {
-    [[location(0)]] vTextureCoord: vec2<f32>;
+    [[location(0)]] vTextureCoord : vec2<f32>;
 };
 
 struct FragmentOutput {
@@ -46,10 +46,9 @@ struct FragmentOutput {
 [[stage(fragment)]]
 fn main(input : FragmentInput) -> FragmentOutput {
     var output : FragmentOutput;
-    output.outColor =  textureSample(myTexture, mySampler, input.vTextureCoord);
+    output.outColor = textureSample(myTexture, mySampler, input.vTextureCoord);
     return output;
 }
-
 </script>
 <canvas id="c" width="465" height="465"></canvas>
 <script src="index.js"></script>
