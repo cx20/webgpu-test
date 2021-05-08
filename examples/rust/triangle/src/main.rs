@@ -4,7 +4,7 @@ use winit::{
     window::Window,
 };
 
-async fn run(event_loop: EventLoop<()>, window: Window, swapchain_format: wgpu::TextureFormat) {
+async fn run(event_loop: EventLoop<()>, window: Window) {
     let size = window.inner_size();
     let instance = wgpu::Instance::new(wgpu::BackendBit::all());
     let surface = unsafe { instance.create_surface(&window) };
@@ -15,15 +15,15 @@ async fn run(event_loop: EventLoop<()>, window: Window, swapchain_format: wgpu::
             compatible_surface: Some(&surface),
         })
         .await
-        .expect("Failed to find an appropiate adapter");
+        .expect("Failed to find an appropriate adapter");
 
     // Create the logical device and command queue
     let (device, queue) = adapter
         .request_device(
             &wgpu::DeviceDescriptor {
+                label: None,
                 features: wgpu::Features::empty(),
                 limits: wgpu::Limits::default(),
-                shader_validation: true,
             },
             None,
         )
@@ -31,8 +31,8 @@ async fn run(event_loop: EventLoop<()>, window: Window, swapchain_format: wgpu::
         .expect("Failed to create device");
 
     // Load the shaders from disk
-    let vs_module = device.create_shader_module(wgpu::include_spirv!("shader.vert.spv"));
-    let fs_module = device.create_shader_module(wgpu::include_spirv!("shader.frag.spv"));
+	let vs_module = device.create_shader_module(&wgpu::include_spirv!("shader.vert.spv"));
+	let fs_module = device.create_shader_module(&wgpu::include_spirv!("shader.frag.spv"));
 
     let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
         label: None,
@@ -40,33 +40,28 @@ async fn run(event_loop: EventLoop<()>, window: Window, swapchain_format: wgpu::
         push_constant_ranges: &[],
     });
 
+    let swapchain_format = adapter.get_swap_chain_preferred_format(&surface).unwrap();
+
     let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
         label: None,
         layout: Some(&pipeline_layout),
-        vertex_stage: wgpu::ProgrammableStageDescriptor {
+        vertex: wgpu::VertexState {
             module: &vs_module,
             entry_point: "main",
+            buffers: &[],
         },
-        fragment_stage: Some(wgpu::ProgrammableStageDescriptor {
+        fragment: Some(wgpu::FragmentState {
             module: &fs_module,
             entry_point: "main",
+            targets: &[swapchain_format.into()],
         }),
-        // Use the default rasterizer state: no culling, no depth bias
-        rasterization_state: None,
-        primitive_topology: wgpu::PrimitiveTopology::TriangleList,
-        color_states: &[swapchain_format.into()],
-        depth_stencil_state: None,
-        vertex_state: wgpu::VertexStateDescriptor {
-            index_format: wgpu::IndexFormat::Uint16,
-            vertex_buffers: &[],
-        },
-        sample_count: 1,
-        sample_mask: !0,
-        alpha_to_coverage_enabled: false,
+        primitive: wgpu::PrimitiveState::default(),
+        depth_stencil: None,
+        multisample: wgpu::MultisampleState::default(),
     });
 
     let mut sc_desc = wgpu::SwapChainDescriptor {
-        usage: wgpu::TextureUsage::OUTPUT_ATTACHMENT,
+        usage: wgpu::TextureUsage::RENDER_ATTACHMENT,
         format: swapchain_format,
         width: size.width,
         height: size.height,
@@ -87,7 +82,7 @@ async fn run(event_loop: EventLoop<()>, window: Window, swapchain_format: wgpu::
             &pipeline_layout,
         );
 
-        *control_flow = ControlFlow::Poll;
+        *control_flow = ControlFlow::Wait;
         match event {
             Event::WindowEvent {
                 event: WindowEvent::Resized(size),
@@ -107,8 +102,9 @@ async fn run(event_loop: EventLoop<()>, window: Window, swapchain_format: wgpu::
                     device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
                 {
                     let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                        color_attachments: &[wgpu::RenderPassColorAttachmentDescriptor {
-                            attachment: &frame.view,
+                        label: None,
+                        color_attachments: &[wgpu::RenderPassColorAttachment {
+                            view: &frame.view,
                             resolve_target: None,
                             ops: wgpu::Operations {
                                 load: wgpu::LoadOp::Clear(wgpu::Color::WHITE),
@@ -137,9 +133,9 @@ fn main() {
     let window = winit::window::Window::new(&event_loop).unwrap();
     #[cfg(not(target_arch = "wasm32"))]
     {
-        subscriber::initialize_default_subscriber(None);
+        env_logger::init();
         // Temporarily avoid srgb formats for the swapchain on the web
-        futures::executor::block_on(run(event_loop, window, wgpu::TextureFormat::Bgra8UnormSrgb));
+        pollster::block_on(run(event_loop, window));
     }
     #[cfg(target_arch = "wasm32")]
     {
@@ -155,6 +151,6 @@ fn main() {
                     .ok()
             })
             .expect("couldn't append canvas to document body");
-        wasm_bindgen_futures::spawn_local(run(event_loop, window, wgpu::TextureFormat::Bgra8Unorm));
+        wasm_bindgen_futures::spawn_local(run(event_loop, window));
     }
 }
