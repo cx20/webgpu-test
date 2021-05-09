@@ -1,0 +1,229 @@
+use winit::{
+    event::{Event, WindowEvent},
+    event_loop::{ControlFlow, EventLoop},
+    window::Window,
+};
+use wgpu::util::DeviceExt;
+
+async fn run(event_loop: EventLoop<()>, window: Window) {
+    let size = window.inner_size();
+    let instance = wgpu::Instance::new(wgpu::BackendBit::all());
+    let surface = unsafe { instance.create_surface(&window) };
+    let adapter = instance
+        .request_adapter(&wgpu::RequestAdapterOptions {
+            power_preference: wgpu::PowerPreference::default(),
+            // Request an adapter which can render to our surface
+            compatible_surface: Some(&surface),
+        })
+        .await
+        .expect("Failed to find an appropriate adapter");
+
+    // Create the logical device and command queue
+    let (device, queue) = adapter
+        .request_device(
+            &wgpu::DeviceDescriptor {
+                label: None,
+                features: wgpu::Features::empty(),
+                limits: wgpu::Limits::default(),
+            },
+            None,
+        )
+        .await
+        .expect("Failed to create device");
+
+    // Load the shaders from disk
+    let vs_module = device.create_shader_module(&wgpu::include_spirv!("shader.vert.spv"));
+    let fs_module = device.create_shader_module(&wgpu::include_spirv!("shader.frag.spv"));
+
+    // Square data
+    //             1.0 y 
+    //              ^  -1.0 
+    //              | / z
+    //              |/       x
+    // -1.0 -----------------> +1.0
+    //            / |
+    //      +1.0 /  |
+    //           -1.0
+    // 
+    //        [0]------[1]
+    //         |        |
+    //         |        |
+    //         |        |
+    //        [2]------[3]
+    //
+    let vertex_data: [[f32; 3]; 4] = [
+        [-0.5, 0.5, 0.0], // v0
+        [ 0.5, 0.5, 0.0], // v1
+        [-0.5,-0.5, 0.0], // v2
+        [ 0.5,-0.5, 0.0]  // v3
+    ];
+    let color_data: [[f32; 4]; 4] = [
+        [1.0, 0.0, 0.0, 1.0], // v0
+        [0.0, 1.0, 0.0, 1.0], // v1
+        [0.0, 0.0, 1.0, 1.0], // v2
+        [1.0, 1.0, 0.0, 1.0]  // v3
+    ];
+
+    let vertex_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: Some("Vertex Buffer"),
+        contents: bytemuck::cast_slice(&vertex_data),
+        usage: wgpu::BufferUsage::VERTEX,
+    });
+
+    let color_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: Some("Color Buffer"),
+        contents: bytemuck::cast_slice(&color_data),
+        usage: wgpu::BufferUsage::VERTEX,
+    });
+
+    let vertex_buffers = [
+        wgpu::VertexBufferLayout {
+            array_stride: 3 * 4,
+            step_mode: wgpu::InputStepMode::Vertex,
+            attributes: & [
+                wgpu::VertexAttribute {
+                    format: wgpu::VertexFormat::Float32x3,
+                    offset: 0,
+                    shader_location: 0,
+                },
+            ],
+        },
+        wgpu::VertexBufferLayout {
+            array_stride: 4 * 4,
+            step_mode: wgpu::InputStepMode::Vertex,
+            attributes: & [
+                wgpu::VertexAttribute {
+                    format: wgpu::VertexFormat::Float32x4,
+                    offset: 0,
+                    shader_location: 1,
+                },
+            ],
+        }
+    ];
+
+    let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+        label: None,
+        bind_group_layouts: &[],
+        push_constant_ranges: &[],
+    });
+
+    let swapchain_format = adapter.get_swap_chain_preferred_format(&surface).unwrap();
+
+    let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+        label: None,
+        layout: Some(&pipeline_layout),
+        vertex: wgpu::VertexState {
+            module: &vs_module,
+            entry_point: "main",
+            buffers: &vertex_buffers,
+        },
+        fragment: Some(wgpu::FragmentState {
+            module: &fs_module,
+            entry_point: "main",
+            targets: &[swapchain_format.into()],
+        }),
+        primitive: wgpu::PrimitiveState {
+            topology: wgpu::PrimitiveTopology::TriangleStrip,
+            strip_index_format: Some(wgpu::IndexFormat::Uint16),
+            ..Default::default()
+        },
+        depth_stencil: None,
+        multisample: wgpu::MultisampleState::default(),
+    });
+
+    let mut sc_desc = wgpu::SwapChainDescriptor {
+        usage: wgpu::TextureUsage::RENDER_ATTACHMENT,
+        format: swapchain_format,
+        width: size.width,
+        height: size.height,
+        present_mode: wgpu::PresentMode::Mailbox,
+    };
+
+    let mut swap_chain = device.create_swap_chain(&surface, &sc_desc);
+
+    event_loop.run(move |event, _, control_flow| {
+        // Have the closure take ownership of the resources.
+        // `event_loop.run` never returns, therefore we must do this to ensure
+        // the resources are properly cleaned up.
+        let _ = (
+            &instance,
+            &adapter,
+            &vs_module,
+            &fs_module,
+            &pipeline_layout,
+        );
+
+        *control_flow = ControlFlow::Wait;
+        match event {
+            Event::WindowEvent {
+                event: WindowEvent::Resized(size),
+                ..
+            } => {
+                // Recreate the swap chain with the new size
+                sc_desc.width = size.width;
+                sc_desc.height = size.height;
+                swap_chain = device.create_swap_chain(&surface, &sc_desc);
+            }
+            Event::RedrawRequested(_) => {
+                let frame = swap_chain
+                    .get_current_frame()
+                    .expect("Failed to acquire next swap chain texture")
+                    .output;
+                let mut encoder =
+                    device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
+                {
+                    let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                        label: None,
+                        color_attachments: &[wgpu::RenderPassColorAttachment {
+                            view: &frame.view,
+                            resolve_target: None,
+                            ops: wgpu::Operations {
+                                load: wgpu::LoadOp::Clear(wgpu::Color::WHITE),
+                                store: true,
+                            },
+                        }],
+                        depth_stencil_attachment: None,
+                    });
+                    rpass.set_pipeline(&render_pipeline);
+                    rpass.set_vertex_buffer(0, vertex_buf.slice(..));
+                    rpass.set_vertex_buffer(1, color_buf.slice(..));
+                    rpass.draw(0..4, 0..1);
+                }
+
+                queue.submit(Some(encoder.finish()));
+            }
+            Event::WindowEvent {
+                event: WindowEvent::CloseRequested,
+                ..
+            } => *control_flow = ControlFlow::Exit,
+            _ => {}
+        }
+    });
+}
+
+fn main() {
+    let event_loop = EventLoop::new();
+    let window = winit::window::Window::new(&event_loop).unwrap();
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        env_logger::init();
+        // Temporarily avoid srgb formats for the swapchain on the web
+        pollster::block_on(run(event_loop, window));
+    }
+    #[cfg(target_arch = "wasm32")]
+    {
+        std::panic::set_hook(Box::new(console_error_panic_hook::hook));
+        console_log::init().expect("could not initialize logger");
+        use winit::platform::web::WindowExtWebSys;
+        // On wasm, append the canvas to the document body
+        web_sys::window()
+            .and_then(|win| win.document())
+            .and_then(|doc| doc.body())
+            .and_then(|body| {
+                body.append_child(&web_sys::Element::from(window.canvas()))
+                    .ok()
+            })
+            .expect("couldn't append canvas to document body");
+        wasm_bindgen_futures::spawn_local(run(event_loop, window));
+    }
+}
