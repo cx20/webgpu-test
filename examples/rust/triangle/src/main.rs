@@ -3,6 +3,7 @@ use winit::{
     event_loop::{ControlFlow, EventLoop},
     window::Window,
 };
+use wgpu::util::DeviceExt;
 
 async fn run(event_loop: EventLoop<()>, window: Window) {
     let size = window.inner_size();
@@ -31,8 +32,32 @@ async fn run(event_loop: EventLoop<()>, window: Window) {
         .expect("Failed to create device");
 
     // Load the shaders from disk
-	let vs_module = device.create_shader_module(&wgpu::include_spirv!("shader.vert.spv"));
-	let fs_module = device.create_shader_module(&wgpu::include_spirv!("shader.frag.spv"));
+    let vs_module = device.create_shader_module(&wgpu::include_spirv!("shader.vert.spv"));
+    let fs_module = device.create_shader_module(&wgpu::include_spirv!("shader.frag.spv"));
+
+    let vertex_data: [[f32; 3]; 3] = [
+        [ 0.0,  0.5, 0.0],
+        [-0.5, -0.5, 0.0],
+        [ 0.5, -0.5, 0.0],
+    ];
+
+    let vertex_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: Some("Vertex Buffer"),
+        contents: bytemuck::cast_slice(&vertex_data),
+        usage: wgpu::BufferUsage::VERTEX,
+    });
+
+    let vertex_buffers = [wgpu::VertexBufferLayout {
+        array_stride: 12,
+        step_mode: wgpu::InputStepMode::Vertex,
+        attributes: &[
+            wgpu::VertexAttribute {
+                format: wgpu::VertexFormat::Float32x3,
+                offset: 0,
+                shader_location: 0,
+            },
+        ],
+    }];
 
     let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
         label: None,
@@ -48,14 +73,17 @@ async fn run(event_loop: EventLoop<()>, window: Window) {
         vertex: wgpu::VertexState {
             module: &vs_module,
             entry_point: "main",
-            buffers: &[],
+            buffers: &vertex_buffers,
         },
         fragment: Some(wgpu::FragmentState {
             module: &fs_module,
             entry_point: "main",
             targets: &[swapchain_format.into()],
         }),
-        primitive: wgpu::PrimitiveState::default(),
+        primitive: wgpu::PrimitiveState {
+            topology: wgpu::PrimitiveTopology::TriangleList,
+            ..Default::default()
+        },
         depth_stencil: None,
         multisample: wgpu::MultisampleState::default(),
     });
@@ -114,6 +142,7 @@ async fn run(event_loop: EventLoop<()>, window: Window) {
                         depth_stencil_attachment: None,
                     });
                     rpass.set_pipeline(&render_pipeline);
+                    rpass.set_vertex_buffer(0, vertex_buf.slice(..));
                     rpass.draw(0..3, 0..1);
                 }
 
