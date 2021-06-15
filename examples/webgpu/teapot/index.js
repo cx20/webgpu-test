@@ -191,7 +191,7 @@ async function init(glslang) {
         const commandEncoder = device.createCommandEncoder();
         const { uploadBuffer: uploadBuffer1 } = updateBufferData(device, uniformBuffer, 0, getTransformationMatrix(), commandEncoder);
         const { uploadBuffer: uploadBuffer2 } = updateBufferData(device, uniformLightBuffer, 0, new Float32Array([100.0, 0.0, 100.0]), commandEncoder);
-        const textureView = swapChain.getCurrentTexture().createView();
+        const textureView = ctx.getCurrentTexture().createView();
         const renderPassDescriptor = {
             colorAttachments: [{
                 view: textureView,
@@ -237,7 +237,7 @@ function configureSwapChain(device, swapChainFormat, context) {
         device: device,
         format: swapChainFormat
     };
-    return context.configureSwapChain(swapChainDescriptor);
+    return context.configure(swapChainDescriptor);
 }
 
 function makeShaderModule_GLSL(glslang, device, type, source) {
@@ -297,10 +297,10 @@ async function createTextureFromImage(device, src, usage) {
     cubeTexture = device.createTexture({
       size: [imageBitmap.width, imageBitmap.height, 1],
       format: 'rgba8unorm',
-      usage: usage | GPUTextureUsage.COPY_DST,
+      usage: usage | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
     });
-    device.queue.copyImageBitmapToTexture(
-      { imageBitmap },
+    device.queue.copyExternalImageToTexture(
+      { source: imageBitmap },
       { texture: cubeTexture },
       [imageBitmap.width, imageBitmap.height, 1]
     );
