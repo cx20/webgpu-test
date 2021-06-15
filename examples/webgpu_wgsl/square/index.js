@@ -95,7 +95,7 @@ async function init() {
 
     let render = function () {
         const commandEncoder = device.createCommandEncoder();
-        const textureView = swapChain.getCurrentTexture().createView();
+        const textureView = ctx.getCurrentTexture().createView();
         const renderPassDescriptor = {
             colorAttachments: [{
                 view: textureView,
@@ -120,7 +120,7 @@ function configureSwapChain(device, swapChainFormat, context) {
         device: device,
         format: swapChainFormat
     };
-    return context.configureSwapChain(swapChainDescriptor);
+    return context.configure(swapChainDescriptor);
 }
 
 function makeShaderModule_WGSL(device, source) {
