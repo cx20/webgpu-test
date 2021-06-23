@@ -114,7 +114,7 @@ const context = canvas.getContext('gpupresent');
 
 const swapChainFormat = "bgra8unorm";
 
-const swapChain = context.configureSwapChain({
+const swapChain = context.configure({
     device,
     format: swapChainFormat,
 });
@@ -154,81 +154,79 @@ const uniformBuffer = device.createBuffer({
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
 });
 
-const bindGroupLayout = device.createBindGroupLayout({
+const uniformsBindGroupLayout = device.createBindGroupLayout({
     entries: [{
         binding: 0,
         visibility: GPUShaderStage.VERTEX,
-        type: "uniform-buffer"
+        buffer: {
+            type: 'uniform',
+        },
     }]
 });
 
-const uniformBindGroup = device.createBindGroup({
-    layout: bindGroupLayout,
-    entries: [{
-        binding: 0,
-        resource: {
-            buffer: uniformBuffer
-        }
-    }],
-});
-
-const pipelineLayout = device.createPipelineLayout({ bindGroupLayouts: [bindGroupLayout] });
+const pipelineLayout = device.createPipelineLayout({ bindGroupLayouts: [uniformsBindGroupLayout] });
 const pipeline = device.createRenderPipeline({
     layout: pipelineLayout,
-    vertexStage: {
+    vertex: {
         module: device.createShaderModule({
             code: glslang.compileGLSL(vs, "vertex")
         }),
-        entryPoint: "main"
+        entryPoint: "main",
+        buffers: [
+            {
+                arrayStride: 3 * 4,
+                attributes: [
+                    {
+                        // position
+                        shaderLocation: 0,
+                        offset: 0,
+                        format: "float32x3"
+                    }
+                ]
+            },
+            {
+                arrayStride: 4 * 4,
+                attributes: [
+                    {
+                        // color
+                        shaderLocation: 1,
+                        offset:  0,
+                        format: "float32x4"
+                    }
+                ]
+            }
+        ]
     },
-    fragmentStage: {
+    fragment: {
         module: device.createShaderModule({
             code: glslang.compileGLSL(fs, "fragment")
         }),
-        entryPoint: "main"
-    },
-    primitiveTopology: "triangle-list",
-    rasterizationState: {
-        frontFace : "ccw",
-        cullMode: 'none'
-    },
-    colorStates: [
-        {
-            format: swapChainFormat,
-            alphaBlend: {
-                srcFactor: "src-alpha",
-                dstFactor: "one-minus-src-alpha",
-                operation: "add"
+        entryPoint: "main",
+        targets: [
+            {
+                format: swapChainFormat
             }
-        }
-    ],
-    vertexState: {
-        vertexBuffers:[{
-            arrayStride: 3 * 4,
-            attributes:[{
-                shaderLocation: 0,
-                offset: 0,
-                format: "float3"
-            }]
-        },
-        {
-            arrayStride: 4 * 4,
-            attributes: [{
-                // color
-                shaderLocation: 1,
-                offset:  0,
-                format: "float4"
-            }]
-        }]
+        ]
+    },
+    primitive: {
+        topology: "triangle-list"
+    },
+    depthStencil: {
+        depthWriteEnabled: true,
+        depthCompare: "less",
+        format: "depth24plus-stencil8"
     }
 });
 
-const renderPassDescriptor = {
-    colorAttachments: [{
-        attachment: null,
-        loadValue: {r: 1, g: 1, b: 1, a: 1},
+const uniformBindGroup = device.createBindGroup({
+    layout: uniformsBindGroupLayout,
+    entries: [{
+        binding: 0,
+        resource: {
+            buffer: uniformBuffer,
+        },
     }],
-};
+});
 
 const vertexUniformData = new Float32Array(uniformComponentCount);
 function getModelMatrix(){
@@ -236,9 +234,33 @@ function getModelMatrix(){
     return vertexUniformData;
 }
 
+const depthTexture = device.createTexture({
+    size: {
+        width: canvas.width,
+        height: canvas.height,
+        depthOrArrayLayers: 1
+    },
+    format: "depth24plus-stencil8",
+    usage: GPUTextureUsage.RENDER_ATTACHMENT
+});
+
 function render() {
-    renderPassDescriptor.colorAttachments[0].attachment = swapChain.getCurrentTexture().createView();
-    device.defaultQueue.writeBuffer(uniformBuffer, 0, getModelMatrix());
+    const textureView = context.getCurrentTexture().createView();
+    const renderPassDescriptor = {
+        colorAttachments: [{
+            view: textureView,
+            loadValue: {r: 1, g: 1, b: 1, a: 1},
+            storeOp: "store"
+        }],
+        depthStencilAttachment: {
+            view: depthTexture.createView(),
+            depthLoadValue: 1.0,
+            depthStoreOp: "store",
+            stencilLoadValue: 0,
+            stencilStoreOp: "store"
+        }
+    };
+    device.queue.writeBuffer(uniformBuffer, 0, getModelMatrix());
 
     const commandEncoder = device.createCommandEncoder({});
     const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
@@ -250,7 +272,7 @@ function render() {
     passEncoder.drawIndexed(geometry.indices.count, 1, 0, 0, 0);
     passEncoder.endPass();
 
-    device.defaultQueue.submit([commandEncoder.finish()]);
+    device.queue.submit([commandEncoder.finish()]);
 }
 
 const ticker = new Hilo3d.Ticker(60);
