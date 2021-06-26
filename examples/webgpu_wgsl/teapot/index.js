@@ -16,8 +16,8 @@ async function init(glslang) {
     mat4.perspective(projectionMatrix, 45, aspect, 0.1, 1000.0);
 
     const ctx = c.getContext("gpupresent")
-    const swapChainFormat = "bgra8unorm";
-    const swapChain = configureSwapChain(device, swapChainFormat, ctx);
+    const format = "bgra8unorm";
+    const swapChain = configureSwapChain(device, format, ctx);
 
     let vShaderModule = makeShaderModule_WGSL(device, vertexShaderWGSL);
     let fShaderModule = makeShaderModule_WGSL(device, fragmentShaderWGSL);
@@ -104,7 +104,7 @@ async function init(glslang) {
             entryPoint: "main",
             targets: [
                 {
-                    format: swapChainFormat
+                    format: format
                 }
             ]
         },
@@ -231,10 +231,10 @@ async function init(glslang) {
     });
 }
 
-function configureSwapChain(device, swapChainFormat, context) {
+function configureSwapChain(device, format, context) {
     const swapChainDescriptor = {
         device: device,
-        format: swapChainFormat
+        format: format
     };
     return context.configure(swapChainDescriptor);
 }

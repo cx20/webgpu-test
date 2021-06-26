@@ -11,9 +11,11 @@ async function init() {
     c.width = window.innerWidth;
     c.height = window.innerHeight;
     const ctx = c.getContext("gpupresent")
-
-    const swapChainFormat = "bgra8unorm";
-    const swapChain = configureSwapChain(device, swapChainFormat, ctx);
+    const format = "bgra8unorm";
+    ctx.configure({
+        device: device,
+        format: format
+    });
 
     let vShaderModule = makeShaderModule_WGSL(device, vertexShaderWGSL);
     let fShaderModule = makeShaderModule_WGSL(device, fragmentShaderWGSL);
@@ -48,7 +50,7 @@ async function init() {
             entryPoint: "main",
             targets: [
                 {
-                    format: swapChainFormat
+                    format: format
                 }
             ]
         },
@@ -76,14 +78,6 @@ async function init() {
         requestAnimationFrame(render);
     }
     requestAnimationFrame(render);
-}
-
-function configureSwapChain(device, swapChainFormat, context) {
-    const swapChainDescriptor = {
-        device: device,
-        format: swapChainFormat
-    };
-    return context.configure(swapChainDescriptor);
 }
 
 function makeShaderModule_WGSL(device, source) {
