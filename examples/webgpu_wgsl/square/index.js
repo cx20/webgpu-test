@@ -10,9 +10,9 @@ async function init() {
     const c = document.getElementById("c");
     c.width = window.innerWidth;
     c.height = window.innerHeight;
-    const ctx = c.getContext("gpupresent")
+    const ctx = c.getContext("gpupresent");
 
-    const format = "bgra8unorm";
+    const format = ctx.getPreferredFormat(device.adapter);
     const swapChain = configureSwapChain(device, format, ctx);
 
     let vShaderModule = makeShaderModule_WGSL(device, vertexShaderWGSL);

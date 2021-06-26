@@ -15,8 +15,8 @@ async function init() {
     let projectionMatrix = mat4.create();
     mat4.perspective(projectionMatrix, 45, aspect, 0.1, 100.0);
 
-    const ctx = c.getContext("gpupresent")
-    const format = "bgra8unorm";
+    const ctx = c.getContext("gpupresent");
+    const format = ctx.getPreferredFormat(device.adapter);
     const swapChain = configureSwapChain(device, format, ctx);
 
     let vShaderModule = makeShaderModule_WGSL(device, vertexShaderWGSL);
