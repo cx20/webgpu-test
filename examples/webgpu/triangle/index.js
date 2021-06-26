@@ -51,7 +51,8 @@ async function init(glslang) {
             entryPoint: "main",
             targets: [
                 {
-                    format: format                }
+                    format: format
+                }
             ]
         },
         primitive: {
