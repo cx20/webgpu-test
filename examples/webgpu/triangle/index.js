@@ -12,9 +12,11 @@ async function init(glslang) {
     c.width = window.innerWidth;
     c.height = window.innerHeight;
     const ctx = c.getContext("gpupresent")
-
-    const swapChainFormat = "bgra8unorm";
-    const swapChain = configureSwapChain(device, swapChainFormat, ctx);
+    const format = "bgra8unorm";
+    ctx.configure({
+        device: device,
+        format: format
+    });
 
     let vShaderModule = makeShaderModule_GLSL(glslang, device, "vertex", vertexShaderGLSL);
     let fShaderModule = makeShaderModule_GLSL(glslang, device, "fragment", fragmentShaderGLSL);
@@ -49,8 +51,7 @@ async function init(glslang) {
             entryPoint: "main",
             targets: [
                 {
-                    format: swapChainFormat
-                }
+                    format: format                }
             ]
         },
         primitive: {
@@ -77,14 +78,6 @@ async function init(glslang) {
         requestAnimationFrame(render);
     }
     requestAnimationFrame(render);
-}
-
-function configureSwapChain(device, swapChainFormat, context) {
-    const swapChainDescriptor = {
-        device: device,
-        format: swapChainFormat
-    };
-    return context.configure(swapChainDescriptor);
 }
 
 function makeShaderModule_GLSL(glslang, device, type, source) {
