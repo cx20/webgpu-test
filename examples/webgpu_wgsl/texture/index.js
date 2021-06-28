@@ -17,7 +17,7 @@ async function init() {
 
     const ctx = c.getContext("gpupresent");
     const format = ctx.getPreferredFormat(device.adapter);
-    const swapChain = configureSwapChain(device, format, ctx);
+    ctx.configure({device: device, format: format});
 
     let vShaderModule = makeShaderModule_WGSL(device, vertexShaderWGSL);
     let fShaderModule = makeShaderModule_WGSL(device, fragmentShaderWGSL);
@@ -282,14 +282,6 @@ async function init() {
     requestAnimationFrame(render);
 }
 
-function configureSwapChain(device, format, context) {
-    const swapChainDescriptor = {
-        device: device,
-        format: format
-    };
-    return context.configure(swapChainDescriptor);
-}
-
 function makeShaderModule_WGSL(device, source) {
     let shaderModuleDescriptor = {
         code: source
@@ -346,7 +338,7 @@ async function createTextureFromImage(device, src, usage) {
     cubeTexture = device.createTexture({
       size: [imageBitmap.width, imageBitmap.height, 1],
       format: 'rgba8unorm',
-      usage: usage | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
+      usage: usage | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT
     });
     device.queue.copyExternalImageToTexture(
       { source: imageBitmap },

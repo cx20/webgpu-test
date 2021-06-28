@@ -17,7 +17,7 @@ async function init() {
 
     const ctx = c.getContext("gpupresent");
     const format = ctx.getPreferredFormat(device.adapter);
-    const swapChain = configureSwapChain(device, format, ctx);
+    ctx.configure({device: device, format: format});
 
     let vShaderModule = makeShaderModule_WGSL(device, vertexShaderWGSL);
     let fShaderModule = makeShaderModule_WGSL(device, fragmentShaderWGSL);
@@ -230,14 +230,6 @@ async function init() {
         requestAnimationFrame(render);
     }
     requestAnimationFrame(render);
-}
-
-function configureSwapChain(device, format, context) {
-    const swapChainDescriptor = {
-        device: device,
-        format: format
-    };
-    return context.configure(swapChainDescriptor);
 }
 
 function makeShaderModule_WGSL(device, source) {
