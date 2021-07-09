@@ -99,18 +99,7 @@ async function init() {
     let colorBuffer = makeVertexBuffer(device, new Float32Array(unpackedColors));
     let indexBuffer = makeIndexBuffer(device, new Uint32Array(indices));
 
-    const uniformsBindGroupLayout = device.createBindGroupLayout({
-        entries: [{
-            binding: 0,
-            visibility: GPUShaderStage.VERTEX,
-            buffer: {
-                type: 'uniform'
-            }
-        }]
-    });
-    const pipelineLayout = device.createPipelineLayout({ bindGroupLayouts: [uniformsBindGroupLayout] });
     const pipeline = device.createRenderPipeline({
-        layout: pipelineLayout,
         vertex: {
             module: vShaderModule,
             entryPoint: "main",
@@ -166,7 +155,7 @@ async function init() {
     });
 
     const uniformBindGroup = device.createBindGroup({
-        layout: uniformsBindGroupLayout,
+        layout: pipeline.getBindGroupLayout(0),
         entries: [{
             binding: 0,
             resource: {
