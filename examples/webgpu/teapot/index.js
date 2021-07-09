@@ -31,39 +31,7 @@ async function init(glslang) {
     let coordBuffer;
     let indexBuffer;
 
-    const uniformsBindGroupLayout = device.createBindGroupLayout({
-        entries: [{
-            binding: 0,
-            visibility: GPUShaderStage.VERTEX,
-            buffer: {
-                type: 'uniform',
-            },
-        }, {
-            // Sampler
-            binding: 1,
-            visibility: GPUShaderStage.FRAGMENT,
-            sampler: {
-                type: 'filtering',
-            },
-        }, {
-            // Texture view
-            binding: 2,
-            visibility: GPUShaderStage.FRAGMENT,
-            texture: {
-                sampleType: 'float',
-            },
-        }, {
-            // Lighting
-            binding: 3,
-            visibility: GPUShaderStage.FRAGMENT,
-            buffer: {
-                type: 'uniform',
-            },
-        }]
-    });
-    const pipelineLayout = device.createPipelineLayout({ bindGroupLayouts: [uniformsBindGroupLayout] });
     const pipeline = device.createRenderPipeline({
-        layout: pipelineLayout,
         vertex: {
             module: vShaderModule,
             entryPoint: "main",
@@ -145,7 +113,7 @@ async function init(glslang) {
     });
 
     const uniformBindGroup = device.createBindGroup({
-        layout: uniformsBindGroupLayout,
+        layout: pipeline.getBindGroupLayout(0),
         entries: [{
             binding: 0,
             resource: {
