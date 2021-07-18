@@ -34,7 +34,7 @@ stage.addChild(mesh);
 const vs = document.getElementById("vs").textContent;
 const fs = document.getElementById("fs").textContent;
 
-const context = canvas.getContext('gpupresent');
+const context = canvas.getContext('webgpu');
 
 const swapChainFormat = "bgra8unorm";
 

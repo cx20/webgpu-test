@@ -16,7 +16,7 @@ async function init(glslang) {
     let projectionMatrix = mat4.create();
     mat4.perspective(projectionMatrix, 45, aspect, 0.1, 1000.0);
 
-    const ctx = c.getContext("gpupresent");
+    const ctx = c.getContext("webgpu");
     const format = ctx.getPreferredFormat(device.adapter);
     ctx.configure({
         device: device,
