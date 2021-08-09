@@ -221,8 +221,9 @@ async function init(glslang) {
     });
     
     let rad1 = 0;
-    function getTransformationMatrix1() {
-        rad1 += Math.PI * 1.0 / 180.0;
+    function getTransformationMatrix1(timestamp) {
+        //rad1 += Math.PI * 1.0 / 180.0;
+        rad1 = timestamp / 1000; // Seconds since the first requestAnimationFrame (ms)
         let viewMatrix = mat4.create();
         mat4.translate(viewMatrix, viewMatrix, vec3.fromValues(-1, 0, -4));
         mat4.rotateX(viewMatrix, viewMatrix, rad1);
@@ -236,8 +237,9 @@ async function init(glslang) {
     }
 
     let rad2 = 0;
-    function getTransformationMatrix2() {
-        rad2 += Math.PI * 1.0 / 180.0;
+    function getTransformationMatrix2(timestamp) {
+        //rad2 += Math.PI * 1.0 / 180.0;
+        rad2 = timestamp / 1000; // Seconds since the first requestAnimationFrame (ms)
         let viewMatrix = mat4.create();
         mat4.translate(viewMatrix, viewMatrix, vec3.fromValues(+1, 0, -4));
         mat4.rotate(viewMatrix, viewMatrix, rad2, [1, 1, 1]);
@@ -258,10 +260,10 @@ async function init(glslang) {
         usage: GPUTextureUsage.RENDER_ATTACHMENT
     });
 
-    let render = function () {
+    let render = function (timestamp) {
         const commandEncoder = device.createCommandEncoder();
-        const { uploadBuffer: buffer1 } = updateBufferData(device, uniformBuffer, 0, getTransformationMatrix1(), commandEncoder);
-        const { uploadBuffer: buffer2 } = updateBufferData(device, uniformBuffer, offset, getTransformationMatrix2(), commandEncoder);
+        const { uploadBuffer: buffer1 } = updateBufferData(device, uniformBuffer, 0, getTransformationMatrix1(timestamp), commandEncoder);
+        const { uploadBuffer: buffer2 } = updateBufferData(device, uniformBuffer, offset, getTransformationMatrix2(timestamp), commandEncoder);
     
         const textureView = ctx.getCurrentTexture().createView();
         const renderPassDescriptor = {
