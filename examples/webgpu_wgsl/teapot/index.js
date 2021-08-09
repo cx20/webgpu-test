@@ -130,8 +130,9 @@ async function init(glslang) {
     });
     
     let rad = 0;
-    function getTransformationMatrix() {
-        rad += Math.PI * 1.0 / 180.0;
+    function getTransformationMatrix(timestamp) {
+        //rad += Math.PI * 1.0 / 180.0;
+        rad = timestamp / 1000; // Seconds since the first requestAnimationFrame (ms)
         let viewMatrix = mat4.create();
         mat4.translate(viewMatrix, viewMatrix, vec3.fromValues(0, 0, -35));
         let now = Date.now() / 1000;
@@ -154,9 +155,9 @@ async function init(glslang) {
         usage: GPUTextureUsage.RENDER_ATTACHMENT
     });
 
-    let render = function () {
+    let render = function (timestamp) {
         const commandEncoder = device.createCommandEncoder();
-        const { uploadBuffer: uploadBuffer1 } = updateBufferData(device, uniformBuffer, 0, getTransformationMatrix(), commandEncoder);
+        const { uploadBuffer: uploadBuffer1 } = updateBufferData(device, uniformBuffer, 0, getTransformationMatrix(timestamp), commandEncoder);
         const { uploadBuffer: uploadBuffer2 } = updateBufferData(device, uniformLightBuffer, 0, new Float32Array([100.0, 0.0, 100.0]), commandEncoder);
         const textureView = ctx.getCurrentTexture().createView();
         const renderPassDescriptor = {

@@ -165,8 +165,9 @@ async function init() {
     });
     
     let rad = 0;
-    function getTransformationMatrix() {
-        rad += Math.PI * 1.0 / 180.0;
+    function getTransformationMatrix(timestamp) {
+        //rad += Math.PI * 1.0 / 180.0;
+        rad = timestamp / 1000; // Seconds since the first requestAnimationFrame (ms)
         let viewMatrix = mat4.create();
         mat4.translate(viewMatrix, viewMatrix, vec3.fromValues(0, 0, -3));
         let now = Date.now() / 1000;
@@ -188,9 +189,9 @@ async function init() {
         usage: GPUTextureUsage.RENDER_ATTACHMENT
     });
     
-    let render = function () {
+    let render = function (timestamp) {
         const commandEncoder = device.createCommandEncoder();
-        const { uploadBuffer } = updateBufferData(device, uniformBuffer, 0, getTransformationMatrix(), commandEncoder);
+        const { uploadBuffer } = updateBufferData(device, uniformBuffer, 0, getTransformationMatrix(timestamp), commandEncoder);
         const textureView = ctx.getCurrentTexture().createView();
         const renderPassDescriptor = {
             colorAttachments: [{
