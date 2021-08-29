@@ -12,7 +12,7 @@ async function init(glslang) {
     c.width = window.innerWidth;
     c.height = window.innerHeight;
     const ctx = c.getContext("webgpu");
-    const format = ctx.getPreferredFormat(device.adapter);
+    const format = ctx.getPreferredFormat(adapter);
     ctx.configure({
         device: device,
         format: format
