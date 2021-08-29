@@ -12,7 +12,7 @@ async function init() {
     c.height = window.innerHeight;
     const ctx = c.getContext("webgpu");
 
-    const format = ctx.getPreferredFormat(device.adapter);
+    const format = ctx.getPreferredFormat(adapter);
     const swapChain = configureSwapChain(device, format, ctx);
 
     let vShaderModule = makeShaderModule_WGSL(device, vertexShaderWGSL);

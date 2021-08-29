@@ -16,7 +16,7 @@ async function init() {
     mat4.perspective(projectionMatrix, 45, aspect, 0.1, 100.0);
 
     const ctx = c.getContext("webgpu");
-    const format = ctx.getPreferredFormat(device.adapter);
+    const format = ctx.getPreferredFormat(adapter);
     ctx.configure({device: device, format: format});
 
     let vShaderModule = makeShaderModule_WGSL(device, vertexShaderWGSL);

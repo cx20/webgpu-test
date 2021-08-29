@@ -16,7 +16,7 @@ async function init(glslang) {
     mat4.perspective(projectionMatrix, 45, aspect, 0.1, 1000.0);
 
     const ctx = c.getContext("webgpu");
-    const format = ctx.getPreferredFormat(device.adapter);
+    const format = ctx.getPreferredFormat(adapter);
     const swapChain = configureSwapChain(device, format, ctx);
 
     let vShaderModule = makeShaderModule_WGSL(device, vertexShaderWGSL);
