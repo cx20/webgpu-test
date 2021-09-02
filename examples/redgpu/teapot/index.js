@@ -54,9 +54,9 @@ new RedGPU.RedGPUContext(c,
                     RedGPU.Buffer.TYPE_VERTEX,
                     new Float32Array(interleaveData),
                     [
-                        new RedGPU.InterleaveInfo('vertexPosition', 'float3'),
-                        new RedGPU.InterleaveInfo('vertexNormal', 'float3'),
-                        new RedGPU.InterleaveInfo('texcoord', 'float2')
+                        new RedGPU.InterleaveInfo('vertexPosition', 'float32x3'),
+                        new RedGPU.InterleaveInfo('vertexNormal', 'float32x3'),
+                        new RedGPU.InterleaveInfo('texcoord', 'float32x2')
                     ]
                 ),
                 new RedGPU.Buffer(

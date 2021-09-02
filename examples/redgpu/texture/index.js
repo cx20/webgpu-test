@@ -66,7 +66,7 @@ new RedGPU.RedGPUContext(c,
                 -0.5, -0.5, -0.5,   -1.0,  0.0,  0.0,   0.0, 1.0  // v4
             ]
         );
-        let indexData = new Uint16Array(
+        let indexData = new Uint32Array(
             [
                 0,  1,  2,    0,  2 , 3,  // Front face
                 4,  5,  6,    4,  6 , 7,  // Back face
@@ -85,9 +85,9 @@ new RedGPU.RedGPUContext(c,
                 RedGPU.Buffer.TYPE_VERTEX,
                 new Float32Array(interleaveData),
                 [
-                    new RedGPU.InterleaveInfo('vertexPosition', 'float3'),
-                    new RedGPU.InterleaveInfo('vertexNormal', 'float3'),
-                    new RedGPU.InterleaveInfo('texcoord', 'float2')
+                    new RedGPU.InterleaveInfo('vertexPosition', 'float32x3'),
+                    new RedGPU.InterleaveInfo('vertexNormal', 'float32x3'),
+                    new RedGPU.InterleaveInfo('texcoord', 'float32x2')
                 ]
             ),
             new RedGPU.Buffer(
