@@ -1,9 +1,18 @@
-const ready = glslang();
-ready.then(init);
+let g_glslang = null;
+let g_twgsl = null;
+
+glslang().then(initGlslang);
 const vertexShaderGLSL = document.getElementById("vs").textContent;
 const fragmentShaderGLSL = document.getElementById("fs").textContent;
 
-async function init(glslang) {
+async function initGlslang(glslang) {
+    g_glslang = glslang;
+    twgsl("../../../libs/twgsl.wasm").then(initTwgsl);
+}
+
+async function initTwgsl(twgsl) {
+    g_twgsl = twgsl;
+    
     const gpu = navigator["gpu"];
     const adapter = await gpu.requestAdapter();
     const device = await adapter.requestDevice();
@@ -18,8 +27,8 @@ async function init(glslang) {
         format: format
     });
 
-    let vShaderModule = makeShaderModule_GLSL(glslang, device, "vertex", vertexShaderGLSL);
-    let fShaderModule = makeShaderModule_GLSL(glslang, device, "fragment", fragmentShaderGLSL);
+    let vShaderModule = makeShaderModule_GLSL(g_glslang, g_twgsl, device, "vertex", vertexShaderGLSL);
+    let fShaderModule = makeShaderModule_GLSL(g_glslang, g_twgsl, device, "fragment", fragmentShaderGLSL);
 
     let positions = [ 
          0.0, 0.5, 0.0, // v0
@@ -81,9 +90,12 @@ async function init(glslang) {
     requestAnimationFrame(render);
 }
 
-function makeShaderModule_GLSL(glslang, device, type, source) {
+function makeShaderModule_GLSL(glslang, twgsl, device, type, source) {
+    let code =  glslang.compileGLSL(source, type);
+    code = twgsl.convertSpirV2WGSL(code);
+
     let shaderModuleDescriptor = {
-        code: glslang.compileGLSL(source, type),
+        code: code,
         source: source
     };
     let shaderModule = device.createShaderModule(shaderModuleDescriptor);
