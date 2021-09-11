@@ -1,18 +1,22 @@
-let g_glslang = null;
-let g_twgsl = null;
+let libGlslang = null;
+let libTwgsl = null;
 
-glslang().then(initGlslang);
 const vertexShaderGLSL = document.getElementById("vs").textContent;
 const fragmentShaderGLSL = document.getElementById("fs").textContent;
 
+glslang().then(initGlslang);
+
 async function initGlslang(glslang) {
-    g_glslang = glslang;
+    libGlslang = glslang;
     twgsl("../../../libs/twgsl.wasm").then(initTwgsl);
 }
 
 async function initTwgsl(twgsl) {
-    g_twgsl = twgsl;
-    
+    libTwgsl = twgsl;
+    init();
+}
+
+async function init() {
     const gpu = navigator["gpu"];
     const adapter = await gpu.requestAdapter();
     const device = await adapter.requestDevice();
@@ -27,8 +31,8 @@ async function initTwgsl(twgsl) {
         format: format
     });
 
-    let vShaderModule = makeShaderModule_GLSL(g_glslang, g_twgsl, device, "vertex", vertexShaderGLSL);
-    let fShaderModule = makeShaderModule_GLSL(g_glslang, g_twgsl, device, "fragment", fragmentShaderGLSL);
+    let vShaderModule = makeShaderModule_GLSL(libGlslang, libTwgsl, device, "vertex", vertexShaderGLSL);
+    let fShaderModule = makeShaderModule_GLSL(libGlslang, libTwgsl, device, "fragment", fragmentShaderGLSL);
 
     let positions = [ 
          0.0, 0.5, 0.0, // v0
