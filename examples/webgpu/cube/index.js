@@ -1,9 +1,22 @@
-const ready = glslang();
-ready.then(init);
+let libGlslang = null;
+let libTwgsl = null;
+
 const vertexShaderGLSL = document.getElementById("vs").textContent;
 const fragmentShaderGLSL = document.getElementById("fs").textContent;
 
-async function init(glslang) {
+glslang().then(initGlslang);
+
+async function initGlslang(glslang) {
+    libGlslang = glslang;
+    twgsl("../../../libs/twgsl.wasm").then(initTwgsl);
+}
+
+async function initTwgsl(twgsl) {
+    libTwgsl = twgsl;
+    init();
+}
+
+async function init() {
     const gpu = navigator["gpu"];
     const adapter = await gpu.requestAdapter();
     const device = await adapter.requestDevice();
@@ -23,8 +36,8 @@ async function init(glslang) {
         format: format
     });
 
-    let vShaderModule = makeShaderModule_GLSL(glslang, device, "vertex", vertexShaderGLSL);
-    let fShaderModule = makeShaderModule_GLSL(glslang, device, "fragment", fragmentShaderGLSL);
+    let vShaderModule = makeShaderModule_GLSL(libGlslang, libTwgsl, device, "vertex", vertexShaderGLSL);
+    let fShaderModule = makeShaderModule_GLSL(libGlslang, libTwgsl, device, "fragment", fragmentShaderGLSL);
 
     // Cube data
     //             1.0 y 
@@ -226,9 +239,12 @@ async function init(glslang) {
     requestAnimationFrame(render);
 }
 
-function makeShaderModule_GLSL(glslang, device, type, source) {
+function makeShaderModule_GLSL(glslang, twgsl, device, type, source) {
+    let code =  glslang.compileGLSL(source, type);
+    code = twgsl.convertSpirV2WGSL(code);
+
     let shaderModuleDescriptor = {
-        code: glslang.compileGLSL(source, type),
+        code: code,
         source: source
     };
     let shaderModule = device.createShaderModule(shaderModuleDescriptor);
