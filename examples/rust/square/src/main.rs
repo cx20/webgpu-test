@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use winit::{
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
@@ -7,7 +8,7 @@ use wgpu::util::DeviceExt;
 
 async fn run(event_loop: EventLoop<()>, window: Window) {
     let size = window.inner_size();
-    let instance = wgpu::Instance::new(wgpu::BackendBit::all());
+    let instance = wgpu::Instance::new(wgpu::Backends::all());
     let surface = unsafe { instance.create_surface(&window) };
     let adapter = instance
         .request_adapter(&wgpu::RequestAdapterOptions {
@@ -32,8 +33,10 @@ async fn run(event_loop: EventLoop<()>, window: Window) {
         .expect("Failed to create device");
 
     // Load the shaders from disk
-    let vs_module = device.create_shader_module(&wgpu::include_spirv!("shader.vert.spv"));
-    let fs_module = device.create_shader_module(&wgpu::include_spirv!("shader.frag.spv"));
+    let shader = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
+        label: None,
+        source: wgpu::ShaderSource::Wgsl(Cow::Borrowed(include_str!("shader.wgsl"))),
+    });
 
     // Square data
     //             1.0 y 
@@ -67,19 +70,19 @@ async fn run(event_loop: EventLoop<()>, window: Window) {
     let vertex_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
         label: Some("Vertex Buffer"),
         contents: bytemuck::cast_slice(&vertex_data),
-        usage: wgpu::BufferUsage::VERTEX,
+        usage: wgpu::BufferUsages::VERTEX
     });
 
     let color_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
         label: Some("Color Buffer"),
         contents: bytemuck::cast_slice(&color_data),
-        usage: wgpu::BufferUsage::VERTEX,
+        usage: wgpu::BufferUsages::VERTEX
     });
 
     let vertex_buffers = [
         wgpu::VertexBufferLayout {
             array_stride: 3 * 4,
-            step_mode: wgpu::InputStepMode::Vertex,
+            step_mode: wgpu::VertexStepMode::Vertex,
             attributes: & [
                 wgpu::VertexAttribute {
                     format: wgpu::VertexFormat::Float32x3,
@@ -90,7 +93,7 @@ async fn run(event_loop: EventLoop<()>, window: Window) {
         },
         wgpu::VertexBufferLayout {
             array_stride: 4 * 4,
-            step_mode: wgpu::InputStepMode::Vertex,
+            step_mode: wgpu::VertexStepMode::Vertex,
             attributes: & [
                 wgpu::VertexAttribute {
                     format: wgpu::VertexFormat::Float32x4,
@@ -107,19 +110,19 @@ async fn run(event_loop: EventLoop<()>, window: Window) {
         push_constant_ranges: &[],
     });
 
-    let swapchain_format = adapter.get_swap_chain_preferred_format(&surface).unwrap();
+    let swapchain_format = surface.get_preferred_format(&adapter).unwrap();
 
     let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
         label: None,
         layout: Some(&pipeline_layout),
         vertex: wgpu::VertexState {
-            module: &vs_module,
-            entry_point: "main",
+            module: &shader,
+            entry_point: "vs_main",
             buffers: &vertex_buffers,
         },
         fragment: Some(wgpu::FragmentState {
-            module: &fs_module,
-            entry_point: "main",
+            module: &shader,
+            entry_point: "fs_main",
             targets: &[swapchain_format.into()],
         }),
         primitive: wgpu::PrimitiveState {
@@ -131,15 +134,15 @@ async fn run(event_loop: EventLoop<()>, window: Window) {
         multisample: wgpu::MultisampleState::default(),
     });
 
-    let mut sc_desc = wgpu::SwapChainDescriptor {
-        usage: wgpu::TextureUsage::RENDER_ATTACHMENT,
+    let mut config = wgpu::SurfaceConfiguration {
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
         format: swapchain_format,
         width: size.width,
         height: size.height,
         present_mode: wgpu::PresentMode::Mailbox,
     };
 
-    let mut swap_chain = device.create_swap_chain(&surface, &sc_desc);
+    surface.configure(&device, &config);
 
     event_loop.run(move |event, _, control_flow| {
         // Have the closure take ownership of the resources.
@@ -148,8 +151,7 @@ async fn run(event_loop: EventLoop<()>, window: Window) {
         let _ = (
             &instance,
             &adapter,
-            &vs_module,
-            &fs_module,
+            &shader,
             &pipeline_layout,
         );
 
@@ -159,23 +161,26 @@ async fn run(event_loop: EventLoop<()>, window: Window) {
                 event: WindowEvent::Resized(size),
                 ..
             } => {
-                // Recreate the swap chain with the new size
-                sc_desc.width = size.width;
-                sc_desc.height = size.height;
-                swap_chain = device.create_swap_chain(&surface, &sc_desc);
+                // Reconfigure the surface with the new size
+                config.width = size.width;
+                config.height = size.height;
+                surface.configure(&device, &config);
             }
             Event::RedrawRequested(_) => {
-                let frame = swap_chain
+                let frame = surface
                     .get_current_frame()
                     .expect("Failed to acquire next swap chain texture")
                     .output;
+                let view = frame
+                    .texture
+                    .create_view(&wgpu::TextureViewDescriptor::default());
                 let mut encoder =
                     device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
                 {
                     let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                         label: None,
                         color_attachments: &[wgpu::RenderPassColorAttachment {
-                            view: &frame.view,
+                            view: &view,
                             resolve_target: None,
                             ops: wgpu::Operations {
                                 load: wgpu::LoadOp::Clear(wgpu::Color::WHITE),
