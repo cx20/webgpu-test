@@ -242,6 +242,8 @@ async function init() {
 function makeShaderModule_GLSL(glslang, twgsl, device, type, source) {
     let code =  glslang.compileGLSL(source, type);
     code = twgsl.convertSpirV2WGSL(code);
+    console.log("// SPIR-V to WGSL");
+    console.log(code);
 
     let shaderModuleDescriptor = {
         code: code,
