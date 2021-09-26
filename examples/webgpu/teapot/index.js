@@ -4,17 +4,14 @@ let libTwgsl = null;
 const vertexShaderGLSL = document.getElementById("vs").textContent;
 const fragmentShaderGLSL = document.getElementById("fs").textContent;
 
-glslang().then(initGlslang);
+let promise1 = glslang();
+let promise2 = twgsl("../../../libs/twgsl.wasm");
 
-async function initGlslang(glslang) {
-    libGlslang = glslang;
-    twgsl("../../../libs/twgsl.wasm").then(initTwgsl);
-}
-
-async function initTwgsl(twgsl) {
-    libTwgsl = twgsl;
+Promise.all([promise1, promise2]).then((args) => {
+    libGlslang = args[0];
+    libTwgsl = args[1];
     init();
-}
+});
 
 async function init() {
     const gpu = navigator["gpu"];
