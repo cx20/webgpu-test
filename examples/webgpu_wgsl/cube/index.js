@@ -214,7 +214,7 @@ async function init() {
         passEncoder.setIndexBuffer(indexBuffer, "uint32");
         passEncoder.setBindGroup(0, uniformBindGroup);
         passEncoder.drawIndexed(indexBuffer.pointNum, 1, 0, 0, 0);
-        passEncoder.endPass();
+        passEncoder.end();
         device.queue.submit([commandEncoder.finish()]);
         uploadBuffer.destroy();
         requestAnimationFrame(render);

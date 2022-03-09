@@ -1,6 +1,17 @@
-init();
-const vertexShaderWGSL = document.getElementById("vs").textContent;
-const fragmentShaderWGSL = document.getElementById("fs").textContent;
+let libGlslang = null;
+let libTwgsl = null;
+
+const vertexShaderGLSL = document.getElementById("vs").textContent;
+const fragmentShaderGLSL = document.getElementById("fs").textContent;
+
+let promise1 = glslang();
+let promise2 = twgsl("../../../libs/twgsl.wasm");
+
+Promise.all([promise1, promise2]).then((args) => {
+    libGlslang = args[0];
+    libTwgsl = args[1];
+    init();
+});
 
 async function init() {
     const gpu = navigator["gpu"];
@@ -17,10 +28,13 @@ async function init() {
 
     const ctx = c.getContext("webgpu");
     const format = ctx.getPreferredFormat(adapter);
-    ctx.configure({device: device, format: format});
+    ctx.configure({
+        device: device,
+        format: format
+    });
 
-    let vShaderModule = makeShaderModule_WGSL(device, vertexShaderWGSL);
-    let fShaderModule = makeShaderModule_WGSL(device, fragmentShaderWGSL);
+    let vShaderModule = makeShaderModule_GLSL(libGlslang, libTwgsl, device, "vertex", vertexShaderGLSL);
+    let fShaderModule = makeShaderModule_GLSL(libGlslang, libTwgsl, device, "fragment", fragmentShaderGLSL);
 
     // Cube data
     //             1.0 y 
@@ -120,6 +134,7 @@ async function init() {
     let vertexBuffer = makeVertexBuffer(device, new Float32Array(positions));
     let coordBuffer = makeVertexBuffer(device, new Float32Array(textureCoords));
     let indexBuffer = makeIndexBuffer(device, new Uint32Array(indices));
+
     const pipeline = device.createRenderPipeline({
         vertex: {
             module: vShaderModule,
@@ -168,8 +183,10 @@ async function init() {
         }
     });
 
-    const uniformBufferSize = 4 * 16; // 4x4 matrix
-
+    const matrixSize = 4 * 16;  // 4x4 matrix
+    const offset = 256; // uniformBindGroup offset must be 256-byte aligned
+    const uniformBufferSize = offset + matrixSize;
+    
     const uniformBuffer = device.createBuffer({
         size: uniformBufferSize,
         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
@@ -182,12 +199,31 @@ async function init() {
         minFilter: "linear",
     });
 
-    const uniformBindGroup = device.createBindGroup({
+    const uniformBindGroup1 = device.createBindGroup({
         layout: pipeline.getBindGroupLayout(0),
         entries: [{
             binding: 0,
             resource: {
                 buffer: uniformBuffer,
+                offset: 0,
+                size: matrixSize
+            }, 
+        }, {
+            binding: 1,
+            resource: sampler,
+        }, {
+            binding: 2,
+            resource: cubeTexture.createView(),
+        }],
+    });
+    const uniformBindGroup2 = device.createBindGroup({
+        layout: pipeline.getBindGroupLayout(0),
+        entries: [{
+            binding: 0,
+            resource: {
+                buffer: uniformBuffer,
+                offset: offset,
+                size: matrixSize
             }, 
         }, {
             binding: 1,
@@ -198,15 +234,29 @@ async function init() {
         }],
     });
     
-    let rad = 0;
-    function getTransformationMatrix(timestamp) {
-        //rad += Math.PI * 1.0 / 180.0;
-        rad = timestamp / 1000; // Seconds since the first requestAnimationFrame (ms)
+    let rad1 = 0;
+    function getTransformationMatrix1(timestamp) {
+        //rad1 += Math.PI * 1.0 / 180.0;
+        rad1 = timestamp / 1000; // Seconds since the first requestAnimationFrame (ms)
         let viewMatrix = mat4.create();
-        mat4.translate(viewMatrix, viewMatrix, vec3.fromValues(0, 0, -3));
-        let now = Date.now() / 1000;
-        //mat4.rotate(viewMatrix, viewMatrix, 1, vec3.fromValues(Math.sin(now), Math.cos(now), 0));
-        mat4.rotate(viewMatrix, viewMatrix, rad, [1, 1, 1]);
+        mat4.translate(viewMatrix, viewMatrix, vec3.fromValues(-1, 0, -4));
+        mat4.rotateX(viewMatrix, viewMatrix, rad1);
+        mat4.rotateY(viewMatrix, viewMatrix, rad1);
+        mat4.rotateZ(viewMatrix, viewMatrix, rad1);
+        
+        let modelViewProjectionMatrix = mat4.create();
+        mat4.multiply(modelViewProjectionMatrix, projectionMatrix, viewMatrix);
+
+        return modelViewProjectionMatrix;
+    }
+
+    let rad2 = 0;
+    function getTransformationMatrix2(timestamp) {
+        //rad2 += Math.PI * 1.0 / 180.0;
+        rad2 = timestamp / 1000; // Seconds since the first requestAnimationFrame (ms)
+        let viewMatrix = mat4.create();
+        mat4.translate(viewMatrix, viewMatrix, vec3.fromValues(+1, 0, -4));
+        mat4.rotate(viewMatrix, viewMatrix, rad2, [1, 1, 1]);
 
         let modelViewProjectionMatrix = mat4.create();
         mat4.multiply(modelViewProjectionMatrix, projectionMatrix, viewMatrix);
@@ -224,9 +274,11 @@ async function init() {
         usage: GPUTextureUsage.RENDER_ATTACHMENT
     });
 
-    let render = function (timestamp) {
+    let render =  function (timestamp) {
         const commandEncoder = device.createCommandEncoder();
-        const { uploadBuffer } = updateBufferData(device, uniformBuffer, 0, getTransformationMatrix(timestamp), commandEncoder);
+        const { uploadBuffer: buffer1 } = updateBufferData(device, uniformBuffer, 0, getTransformationMatrix1(timestamp), commandEncoder);
+        const { uploadBuffer: buffer2 } = updateBufferData(device, uniformBuffer, offset, getTransformationMatrix2(timestamp), commandEncoder);
+    
         const textureView = ctx.getCurrentTexture().createView();
         const renderPassDescriptor = {
             colorAttachments: [{
@@ -247,19 +299,34 @@ async function init() {
         passEncoder.setVertexBuffer(0, vertexBuffer);
         passEncoder.setVertexBuffer(1, coordBuffer);
         passEncoder.setIndexBuffer(indexBuffer, "uint32");
-        passEncoder.setBindGroup(0, uniformBindGroup);
+
+        // 1st Cube
+        passEncoder.setBindGroup(0, uniformBindGroup1);
         passEncoder.drawIndexed(indexBuffer.pointNum, 1, 0, 0, 0);
+
+        // 2nd Cube
+        passEncoder.setBindGroup(0, uniformBindGroup2);
+        passEncoder.drawIndexed(indexBuffer.pointNum, 1, 0, 0, 0);
+
         passEncoder.end();
+
         device.queue.submit([commandEncoder.finish()]);
-        uploadBuffer.destroy();
+        buffer1.destroy();
+        buffer2.destroy();
         requestAnimationFrame(render);
     }
     requestAnimationFrame(render);
 }
 
-function makeShaderModule_WGSL(device, source) {
+function makeShaderModule_GLSL(glslang, twgsl, device, type, source) {
+    let code =  glslang.compileGLSL(source, type);
+    code = twgsl.convertSpirV2WGSL(code);
+    console.log("// SPIR-V to WGSL");
+    console.log(code);
+
     let shaderModuleDescriptor = {
-        code: source
+        code: code,
+        source: source
     };
     let shaderModule = device.createShaderModule(shaderModuleDescriptor);
     return shaderModule;
@@ -313,7 +380,7 @@ async function createTextureFromImage(device, src, usage) {
     cubeTexture = device.createTexture({
       size: [imageBitmap.width, imageBitmap.height, 1],
       format: 'rgba8unorm',
-      usage: usage | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT
+      usage: usage | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
     });
     device.queue.copyExternalImageToTexture(
       { source: imageBitmap },

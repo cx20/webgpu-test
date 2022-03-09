@@ -294,7 +294,7 @@ async function init(glslang) {
         passEncoder.setBindGroup(0, uniformBindGroup2);
         passEncoder.drawIndexed(indexBuffer.pointNum, 1, 0, 0, 0);
 
-        passEncoder.endPass();
+        passEncoder.end();
 
         device.queue.submit([commandEncoder.finish()]);
         buffer1.destroy();

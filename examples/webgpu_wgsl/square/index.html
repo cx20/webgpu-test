@@ -8,16 +8,16 @@
 <body>
 <script id="vs" type="x-shader/x-vertex">
 struct VertexInput {
-    [[location(0)]] position : vec3<f32>;
-    [[location(1)]] color : vec4<f32>;
+    @location(0) position : vec3<f32>;
+    @location(1) color : vec4<f32>;
 };
 
 struct VertexOutput {
-    [[builtin(position)]] Position : vec4<f32>;
-    [[location(0)]] fragColor : vec4<f32>;
+    @builtin(position) Position : vec4<f32>;
+    @location(0) fragColor : vec4<f32>;
 };
 
-[[stage(vertex)]]
+@stage(vertex)
 fn main(input : VertexInput) -> VertexOutput {
     var output : VertexOutput;
     output.fragColor = input.color;
@@ -28,14 +28,14 @@ fn main(input : VertexInput) -> VertexOutput {
 
 <script id="fs" type="x-shader/x-fragment">
 struct FragmentInput {
-    [[location(0)]] fragColor : vec4<f32>;
+    @location(0) fragColor : vec4<f32>;
 };
 
 struct FragmentOutput {
-    [[location(0)]] outColor : vec4<f32>;
+    @location(0) outColor : vec4<f32>;
 };
 
-[[stage(fragment)]]
+@stage(fragment)
 fn main(input : FragmentInput) -> FragmentOutput {
     var output : FragmentOutput;
     output.outColor = input.fragColor;

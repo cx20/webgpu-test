@@ -1,6 +1,17 @@
-init();
-const vertexShaderWGSL = document.getElementById("vs").textContent;
-const fragmentShaderWGSL = document.getElementById("fs").textContent;
+let libGlslang = null;
+let libTwgsl = null;
+
+const vertexShaderGLSL = document.getElementById("vs").textContent;
+const fragmentShaderGLSL = document.getElementById("fs").textContent;
+
+let promise1 = glslang();
+let promise2 = twgsl("../../../libs/twgsl.wasm");
+
+Promise.all([promise1, promise2]).then((args) => {
+    libGlslang = args[0];
+    libTwgsl = args[1];
+    init();
+});
 
 async function init() {
     const gpu = navigator["gpu"];
@@ -17,8 +28,8 @@ async function init() {
         format: format
     });
 
-    let vShaderModule = makeShaderModule_WGSL(device, vertexShaderWGSL);
-    let fShaderModule = makeShaderModule_WGSL(device, fragmentShaderWGSL);
+    let vShaderModule = makeShaderModule_GLSL(libGlslang, libTwgsl, device, "vertex", vertexShaderGLSL);
+    let fShaderModule = makeShaderModule_GLSL(libGlslang, libTwgsl, device, "fragment", fragmentShaderGLSL);
 
     let positions = [ 
          0.0, 0.5, 0.0, // v0
@@ -55,11 +66,11 @@ async function init() {
             ]
         },
         primitive: {
-            topology: "triangle-list"
+           topology: "triangle-list"
         }
     });
 
-    let render = function () {
+    let render =  function () {
         const commandEncoder = device.createCommandEncoder();
         const textureView = ctx.getCurrentTexture().createView();
         const renderPassDescriptor = {
@@ -80,9 +91,15 @@ async function init() {
     requestAnimationFrame(render);
 }
 
-function makeShaderModule_WGSL(device, source) {
+function makeShaderModule_GLSL(glslang, twgsl, device, type, source) {
+    let code =  glslang.compileGLSL(source, type);
+    code = twgsl.convertSpirV2WGSL(code);
+    console.log("// SPIR-V to WGSL");
+    console.log(code);
+
     let shaderModuleDescriptor = {
-        code: source
+        code: code,
+        source: source
     };
     let shaderModule = device.createShaderModule(shaderModuleDescriptor);
     return shaderModule;
