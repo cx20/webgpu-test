@@ -1,6 +1,17 @@
-init();
-const vertexShaderWGSL = document.getElementById("vs").textContent;
-const fragmentShaderWGSL = document.getElementById("fs").textContent;
+let libGlslang = null;
+let libTwgsl = null;
+
+const vertexShaderGLSL = document.getElementById("vs").textContent;
+const fragmentShaderGLSL = document.getElementById("fs").textContent;
+
+let promise1 = glslang();
+let promise2 = twgsl("../../../libs/twgsl.wasm");
+
+Promise.all([promise1, promise2]).then((args) => {
+    libGlslang = args[0];
+    libTwgsl = args[1];
+    init();
+});
 
 async function init() {
     const gpu = navigator["gpu"];
@@ -13,113 +24,23 @@ async function init() {
 
     const aspect = Math.abs(c.width / c.height);
     let projectionMatrix = mat4.create();
-    mat4.perspective(projectionMatrix, 45, aspect, 0.1, 100.0);
+    mat4.perspective(projectionMatrix, 45, aspect, 0.1, 1000.0);
 
     const ctx = c.getContext("webgpu");
     const format = ctx.getPreferredFormat(adapter);
-    ctx.configure({device: device, format: format});
+    ctx.configure({
+        device: device,
+        format: format
+    });
 
-    let vShaderModule = makeShaderModule_WGSL(device, vertexShaderWGSL);
-    let fShaderModule = makeShaderModule_WGSL(device, fragmentShaderWGSL);
+    let vShaderModule = makeShaderModule_GLSL(libGlslang, libTwgsl, device, "vertex", vertexShaderGLSL);
+    let fShaderModule = makeShaderModule_GLSL(libGlslang, libTwgsl, device, "fragment", fragmentShaderGLSL);
 
-    // Cube data
-    //             1.0 y 
-    //              ^  -1.0 
-    //              | / z
-    //              |/       x
-    // -1.0 -----------------> +1.0
-    //            / |
-    //      +1.0 /  |
-    //           -1.0
-    // 
-    //         [7]------[6]
-    //        / |      / |
-    //      [3]------[2] |
-    //       |  |     |  |
-    //       | [4]----|-[5]
-    //       |/       |/
-    //      [0]------[1]
-    //
-    const positions = [ 
-        // Front face
-        -0.5, -0.5,  0.5, // v0
-         0.5, -0.5,  0.5, // v1
-         0.5,  0.5,  0.5, // v2
-        -0.5,  0.5,  0.5, // v3
-        // Back face
-        -0.5, -0.5, -0.5, // v4
-         0.5, -0.5, -0.5, // v5
-         0.5,  0.5, -0.5, // v6
-        -0.5,  0.5, -0.5, // v7
-        // Top face
-         0.5,  0.5,  0.5, // v2
-        -0.5,  0.5,  0.5, // v3
-        -0.5,  0.5, -0.5, // v7
-         0.5,  0.5, -0.5, // v6
-        // Bottom face
-        -0.5, -0.5,  0.5, // v0
-         0.5, -0.5,  0.5, // v1
-         0.5, -0.5, -0.5, // v5
-        -0.5, -0.5, -0.5, // v4
-         // Right face
-         0.5, -0.5,  0.5, // v1
-         0.5,  0.5,  0.5, // v2
-         0.5,  0.5, -0.5, // v6
-         0.5, -0.5, -0.5, // v5
-         // Left face
-        -0.5, -0.5,  0.5, // v0
-        -0.5,  0.5,  0.5, // v3
-        -0.5,  0.5, -0.5, // v7
-        -0.5, -0.5, -0.5  // v4
-    ];
-    const textureCoords = [
-        // Front face
-        0.0, 0.0,
-        1.0, 0.0,
-        1.0, 1.0,
-        0.0, 1.0,
+    let vertexBuffer;
+    let normalBuffer;
+    let coordBuffer;
+    let indexBuffer;
 
-        // Back face
-        1.0, 0.0,
-        1.0, 1.0,
-        0.0, 1.0,
-        0.0, 0.0,
-
-        // Top face
-        0.0, 1.0,
-        0.0, 0.0,
-        1.0, 0.0,
-        1.0, 1.0,
-
-        // Bottom face
-        1.0, 1.0,
-        0.0, 1.0,
-        0.0, 0.0,
-        1.0, 0.0,
-
-        // Right face
-        1.0, 0.0,
-        1.0, 1.0,
-        0.0, 1.0,
-        0.0, 0.0,
-
-        // Left face
-        0.0, 0.0,
-        1.0, 0.0,
-        1.0, 1.0,
-        0.0, 1.0,
-    ];
-    const indices = [
-         0,  1,  2,    0,  2 , 3,  // Front face
-         4,  5,  6,    4,  6 , 7,  // Back face
-         8,  9, 10,    8, 10, 11,  // Top face
-        12, 13, 14,   12, 14, 15,  // Bottom face
-        16, 17, 18,   16, 18, 19,  // Right face
-        20, 21, 22,   20, 22, 23   // Left face
-    ];
-    let vertexBuffer = makeVertexBuffer(device, new Float32Array(positions));
-    let coordBuffer = makeVertexBuffer(device, new Float32Array(textureCoords));
-    let indexBuffer = makeIndexBuffer(device, new Uint32Array(indices));
     const pipeline = device.createRenderPipeline({
         vertex: {
             module: vShaderModule,
@@ -137,11 +58,22 @@ async function init() {
                     ]
                 },
                 {
+                    arrayStride: 3 * 4,
+                    attributes: [
+                        {
+                            // normal
+                            shaderLocation: 1,
+                            offset: 0,
+                            format: "float32x3"
+                        }
+                    ]
+                },
+                {
                     arrayStride: 2 * 4,
                     attributes: [
                         {
                             // textureCoord
-                            shaderLocation: 1,
+                            shaderLocation: 2,
                             offset:  0,
                             format: "float32x2"
                         }
@@ -169,17 +101,25 @@ async function init() {
     });
 
     const uniformBufferSize = 4 * 16; // 4x4 matrix
-
     const uniformBuffer = device.createBuffer({
         size: uniformBufferSize,
         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
-    const cubeTexture = await createTextureFromImage(device, "../../../assets/textures/frog.jpg", GPUTextureUsage.TEXTURE_BINDING);
-    
     const sampler = device.createSampler({
         magFilter: "linear",
         minFilter: "linear",
+        addressModeU: "repeat",
+        addressModeV: "repeat",
+    });
+
+    // copy from: https://github.com/gpjt/webgl-lessons/blob/master/lesson14/arroway.de_metal%2Bstructure%2B06_d100_flat.jpg
+    const cubeTexture = await createTextureFromImage(device, "../../../assets/textures/arroway.de_metal+structure+06_d100_flat.jpg", GPUTextureUsage.TEXTURE_BINDING);
+    
+    const uniformLightBufferSize = 4 * 3; // 4 x vec3
+    const uniformLightBuffer = device.createBuffer({
+        size: uniformLightBufferSize,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
     const uniformBindGroup = device.createBindGroup({
@@ -195,6 +135,11 @@ async function init() {
         }, {
             binding: 2,
             resource: cubeTexture.createView(),
+        }, {
+            binding: 3,
+            resource: {
+                buffer: uniformLightBuffer,
+            } 
         }],
     });
     
@@ -203,10 +148,10 @@ async function init() {
         //rad += Math.PI * 1.0 / 180.0;
         rad = timestamp / 1000; // Seconds since the first requestAnimationFrame (ms)
         let viewMatrix = mat4.create();
-        mat4.translate(viewMatrix, viewMatrix, vec3.fromValues(0, 0, -3));
+        mat4.translate(viewMatrix, viewMatrix, vec3.fromValues(0, 0, -35));
         let now = Date.now() / 1000;
         //mat4.rotate(viewMatrix, viewMatrix, 1, vec3.fromValues(Math.sin(now), Math.cos(now), 0));
-        mat4.rotate(viewMatrix, viewMatrix, rad, [1, 1, 1]);
+        mat4.rotate(viewMatrix, viewMatrix, rad, [0, 1, 0]);
 
         let modelViewProjectionMatrix = mat4.create();
         mat4.multiply(modelViewProjectionMatrix, projectionMatrix, viewMatrix);
@@ -224,14 +169,15 @@ async function init() {
         usage: GPUTextureUsage.RENDER_ATTACHMENT
     });
 
-    let render = function (timestamp) {
+    let render =  function (timestamp) {
         const commandEncoder = device.createCommandEncoder();
-        const { uploadBuffer } = updateBufferData(device, uniformBuffer, 0, getTransformationMatrix(timestamp), commandEncoder);
+        const { uploadBuffer: uploadBuffer1 } = updateBufferData(device, uniformBuffer, 0, getTransformationMatrix(timestamp), commandEncoder);
+        const { uploadBuffer: uploadBuffer2 } = updateBufferData(device, uniformLightBuffer, 0, new Float32Array([100.0, 0.0, 100.0]), commandEncoder);
         const textureView = ctx.getCurrentTexture().createView();
         const renderPassDescriptor = {
             colorAttachments: [{
                 view: textureView,
-                loadValue: {r: 1, g: 1, b: 1, a: 1},
+                loadValue: {r: 0, g: 0, b: 0, a: 0},
                 storeOp: "store"
             }],
             depthStencilAttachment: {
@@ -245,21 +191,38 @@ async function init() {
         const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
         passEncoder.setPipeline(pipeline);
         passEncoder.setVertexBuffer(0, vertexBuffer);
-        passEncoder.setVertexBuffer(1, coordBuffer);
+        passEncoder.setVertexBuffer(1, normalBuffer);
+        passEncoder.setVertexBuffer(2, coordBuffer);
         passEncoder.setIndexBuffer(indexBuffer, "uint32");
         passEncoder.setBindGroup(0, uniformBindGroup);
         passEncoder.drawIndexed(indexBuffer.pointNum, 1, 0, 0, 0);
         passEncoder.end();
         device.queue.submit([commandEncoder.finish()]);
-        uploadBuffer.destroy();
+        uploadBuffer1.destroy();
+        uploadBuffer2.destroy();
         requestAnimationFrame(render);
     }
-    requestAnimationFrame(render);
+
+    // copy from: https://github.com/gpjt/webgl-lessons/blob/master/lesson14/Teapot.json
+    $.getJSON("../../../assets/json/teapot.json", function (data) {
+        vertexBuffer = makeVertexBuffer(device, new Float32Array(data.vertexPositions));
+        normalBuffer = makeVertexBuffer(device, new Float32Array(data.vertexNormals));
+        coordBuffer = makeVertexBuffer(device, new Float32Array(data.vertexTextureCoords));
+        indexBuffer = makeIndexBuffer(device, new Uint32Array(data.indices));
+
+        requestAnimationFrame(render);
+    });
 }
 
-function makeShaderModule_WGSL(device, source) {
+function makeShaderModule_GLSL(glslang, twgsl, device, type, source) {
+    let code =  glslang.compileGLSL(source, type);
+    code = twgsl.convertSpirV2WGSL(code);
+    console.log("// SPIR-V to WGSL");
+    console.log(code);
+
     let shaderModuleDescriptor = {
-        code: source
+        code: code,
+        source: source
     };
     let shaderModule = device.createShaderModule(shaderModuleDescriptor);
     return shaderModule;
@@ -313,7 +276,7 @@ async function createTextureFromImage(device, src, usage) {
     cubeTexture = device.createTexture({
       size: [imageBitmap.width, imageBitmap.height, 1],
       format: 'rgba8unorm',
-      usage: usage | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT
+      usage: usage | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
     });
     device.queue.copyExternalImageToTexture(
       { source: imageBitmap },

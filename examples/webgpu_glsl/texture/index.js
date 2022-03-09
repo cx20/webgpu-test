@@ -1,6 +1,20 @@
-init();
-const vertexShaderWGSL = document.getElementById("vs").textContent;
-const fragmentShaderWGSL = document.getElementById("fs").textContent;
+let libGlslang = null;
+let libTwgsl = null;
+
+const vertexShaderGLSL = document.getElementById("vs").textContent;
+const fragmentShaderGLSL = document.getElementById("fs").textContent;
+
+glslang().then(initGlslang);
+
+async function initGlslang(glslang) {
+    libGlslang = glslang;
+    twgsl("../../../libs/twgsl.wasm").then(initTwgsl);
+}
+
+async function initTwgsl(twgsl) {
+    libTwgsl = twgsl;
+    init();
+}
 
 async function init() {
     const gpu = navigator["gpu"];
@@ -17,10 +31,13 @@ async function init() {
 
     const ctx = c.getContext("webgpu");
     const format = ctx.getPreferredFormat(adapter);
-    ctx.configure({device: device, format: format});
+    ctx.configure({
+        device: device,
+        format: format
+    });
 
-    let vShaderModule = makeShaderModule_WGSL(device, vertexShaderWGSL);
-    let fShaderModule = makeShaderModule_WGSL(device, fragmentShaderWGSL);
+    let vShaderModule = makeShaderModule_GLSL(libGlslang, libTwgsl, device, "vertex", vertexShaderGLSL);
+    let fShaderModule = makeShaderModule_GLSL(libGlslang, libTwgsl, device, "fragment", fragmentShaderGLSL);
 
     // Cube data
     //             1.0 y 
@@ -120,7 +137,33 @@ async function init() {
     let vertexBuffer = makeVertexBuffer(device, new Float32Array(positions));
     let coordBuffer = makeVertexBuffer(device, new Float32Array(textureCoords));
     let indexBuffer = makeIndexBuffer(device, new Uint32Array(indices));
+
+    const uniformsBindGroupLayout = device.createBindGroupLayout({
+        entries: [{
+            binding: 0,
+            visibility: GPUShaderStage.VERTEX,
+            buffer: {
+                type: 'uniform',
+            },
+        }, {
+           // Sampler
+            binding: 1,
+            visibility: GPUShaderStage.FRAGMENT,
+            sampler: {
+                type: 'filtering',
+            },
+        }, {
+            // Texture view
+            binding: 2,
+            visibility: GPUShaderStage.FRAGMENT,
+            texture: {
+                sampleType: 'float',
+            },
+        }]
+    });
+    const pipelineLayout = device.createPipelineLayout({ bindGroupLayouts: [uniformsBindGroupLayout] });
     const pipeline = device.createRenderPipeline({
+        layout: pipelineLayout,
         vertex: {
             module: vShaderModule,
             entryPoint: "main",
@@ -183,7 +226,7 @@ async function init() {
     });
 
     const uniformBindGroup = device.createBindGroup({
-        layout: pipeline.getBindGroupLayout(0),
+        layout: uniformsBindGroupLayout,
         entries: [{
             binding: 0,
             resource: {
@@ -224,7 +267,7 @@ async function init() {
         usage: GPUTextureUsage.RENDER_ATTACHMENT
     });
 
-    let render = function (timestamp) {
+    let render =  function (timestamp) {
         const commandEncoder = device.createCommandEncoder();
         const { uploadBuffer } = updateBufferData(device, uniformBuffer, 0, getTransformationMatrix(timestamp), commandEncoder);
         const textureView = ctx.getCurrentTexture().createView();
@@ -257,9 +300,15 @@ async function init() {
     requestAnimationFrame(render);
 }
 
-function makeShaderModule_WGSL(device, source) {
+function makeShaderModule_GLSL(glslang, twgsl, device, type, source) {
+    let code =  glslang.compileGLSL(source, type);
+    code = twgsl.convertSpirV2WGSL(code);
+    console.log("// SPIR-V to WGSL");
+    console.log(code);
+
     let shaderModuleDescriptor = {
-        code: source
+        code: code,
+        source: source
     };
     let shaderModule = device.createShaderModule(shaderModuleDescriptor);
     return shaderModule;
@@ -313,7 +362,7 @@ async function createTextureFromImage(device, src, usage) {
     cubeTexture = device.createTexture({
       size: [imageBitmap.width, imageBitmap.height, 1],
       format: 'rgba8unorm',
-      usage: usage | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT
+      usage: usage | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
     });
     device.queue.copyExternalImageToTexture(
       { source: imageBitmap },
