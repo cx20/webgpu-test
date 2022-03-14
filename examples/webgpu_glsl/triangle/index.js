@@ -76,7 +76,8 @@ async function init() {
         const renderPassDescriptor = {
             colorAttachments: [{
                 view: textureView,
-                loadValue: {r: 1, g: 1, b: 1, a: 1},
+                loadOp: "clear",
+                clearValue: {r: 1, g: 1, b: 1, a: 1},
                 storeOp: "store"
             }]
         };
