@@ -183,9 +183,11 @@ async function init() {
             }],
             depthStencilAttachment: {
                 view: depthTexture.createView(),
-                depthLoadValue: 1.0,
+                depthClearValue: 1.0,
+                depthLoadOp: 'clear',
                 depthStoreOp: "store",
-                stencilLoadValue: 0,
+                stencilClearValue: 0,
+                stencilLoadOp: 'clear',
                 stencilStoreOp: "store"
             }
         };
