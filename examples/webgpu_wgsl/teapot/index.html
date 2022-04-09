@@ -10,21 +10,21 @@
 <script src="//code.jquery.com/jquery-3.4.0.js"></script>
 <script id="vs" type="x-shader/x-vertex">
 struct Uniforms {
-    modelViewProjectionMatrix : mat4x4<f32>;
+    modelViewProjectionMatrix : mat4x4<f32>
 };
 @binding(0) @group(0) var<uniform> uniforms : Uniforms;
 
 struct VertexInput {
-    @location(0) position : vec3<f32>;
-    @location(1) normal : vec3<f32>;
-    @location(2) textureCoord : vec2<f32>;
+    @location(0) position : vec3<f32>,
+    @location(1) normal : vec3<f32>,
+    @location(2) textureCoord : vec2<f32>
 };
 
 struct VertexOutput {
-    @builtin(position) Position : vec4<f32>;
-    @location(0) vPosition : vec4<f32>;
-    @location(1) vNormal : vec3<f32>;
-    @location(2) vTextureCoord : vec2<f32>;
+    @builtin(position) Position : vec4<f32>,
+    @location(0) vPosition : vec4<f32>,
+    @location(1) vNormal : vec3<f32>,
+    @location(2) vTextureCoord : vec2<f32>
 };
 
 @stage(vertex)
@@ -43,18 +43,18 @@ fn main(input : VertexInput) -> VertexOutput {
 @binding(2) @group(0) var myTexture: texture_2d<f32>;
 
 struct Uniforms {
-    pointLightingLocation : vec3<f32>;
+    pointLightingLocation : vec3<f32>
 };
 @binding(3) @group(0) var<uniform> uniforms : Uniforms;
 
 struct FragmentInput {
-    @location(0) vPosition: vec4<f32>;
-    @location(1) vNormal: vec3<f32>;
-    @location(2) vTextureCoord: vec2<f32>;
+    @location(0) vPosition: vec4<f32>,
+    @location(1) vNormal: vec3<f32>,
+    @location(2) vTextureCoord: vec2<f32>
 };
 
 struct FragmentOutput {
-    @location(0) outColor : vec4<f32>;
+    @location(0) outColor : vec4<f32>
 };
 
 @stage(fragment)
