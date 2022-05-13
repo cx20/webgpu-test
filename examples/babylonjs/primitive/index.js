@@ -3,16 +3,6 @@ async function init() {
     const engine = new BABYLON.WebGPUEngine(canvas);
     await engine.initAsync();
 
-    let plane;
-    let cube;
-    let sphere;
-    let circle;
-    let cylinder;
-    let cone;
-    let knot;
-    let torus;
-    let octa;
-
     const createScene = function() {
         const scene = new BABYLON.Scene(engine);
         const camera = new BABYLON.ArcRotateCamera("camera", 0, 1, 5, BABYLON.Vector3.Zero(), scene);
@@ -23,38 +13,38 @@ async function init() {
         scene.clearColor = new BABYLON.Color3(0, 0, 0);
 
         // CreatePlane(name, size, scene, updatable, sideOrientation)
-        plane = BABYLON.Mesh.CreatePlane('plane', 1.0, scene);
+        const plane = BABYLON.Mesh.CreatePlane('plane', 1.0, scene);
         plane.position = new BABYLON.Vector3(-1.5, 1.5, 0); 
 
         // CreateBox(name, size, scene, updatable, sideOrientation)
-        cube = BABYLON.Mesh.CreateBox('cube', 1.0, scene);
+        const cube = BABYLON.Mesh.CreateBox('cube', 1.0, scene);
         cube.position = new BABYLON.Vector3(0, 1.5, 0); 
 
         // CreateSphere(name, segments, diameter, scene, updatable, sideOrientation)
-        sphere = BABYLON.Mesh.CreateSphere('sphere', 24.0, 1.0, scene);
+        const sphere = BABYLON.Mesh.CreateSphere('sphere', 24.0, 1.0, scene);
         sphere.position = new BABYLON.Vector3(1.5, 1.5, 0); 
         
         // CreateDisc(name, radius, tessellation, scene, updatable, sideOrientation)
-        circle = BABYLON.Mesh.CreateDisc("disc", 0.5, 24, scene);
+        const circle = BABYLON.Mesh.CreateDisc("disc", 0.5, 24, scene);
         circle.position = new BABYLON.Vector3(-1.5, 0, 0); 
         
         // CreateCylinder(name, height, diameterTop, diameterBottom, tessellation, subdivisions, scene, updatable, sideOrientation)
-        cylinder = BABYLON.Mesh.CreateCylinder("Cylinder", 1, 1, 1, 32, scene);
+        const cylinder = BABYLON.Mesh.CreateCylinder("Cylinder", 1, 1, 1, 32, scene);
         cylinder.position = new BABYLON.Vector3(0, 0, 0); 
 
         // CreateCylinder(name, height, diameterTop, diameterBottom, tessellation, subdivisions, scene, updatable, sideOrientation)
-        cone = BABYLON.Mesh.CreateCylinder("Cone", 1, 0, 1, 32, scene);
+        const cone = BABYLON.Mesh.CreateCylinder("Cone", 1, 0, 1, 32, scene);
         cone.position = new BABYLON.Vector3(1.5, 0, 0); 
         
         // CreateTorusKnot(name, radius, tube, radialSegments, tubularSegments, p, q, scene, updatable, sideOrientation)
-        knot = BABYLON.Mesh.CreateTorusKnot("knot", 0.3, 0.1, 128, 64, 2, 3, scene);
+        const knot = BABYLON.Mesh.CreateTorusKnot("knot", 0.3, 0.1, 128, 64, 2, 3, scene);
         knot.position = new BABYLON.Vector3(-1.5, -1.5, 0); 
 
         // CreateTorus(name, diameter, thickness, tessellation, scene, updatable, sideOrientation)
-        torus = BABYLON.Mesh.CreateTorus("torus", 1.0, 0.2, 10, scene);
+        const torus = BABYLON.Mesh.CreateTorus("torus", 1.0, 0.2, 10, scene);
         torus.position = new BABYLON.Vector3(0, -1.5, 0); 
         
-        octa = BABYLON.MeshBuilder.CreatePolyhedron("oct", {type: 1, size: 0.5}, scene);
+        const octa = BABYLON.MeshBuilder.CreatePolyhedron("oct", {type: 1, size: 0.5}, scene);
         octa.position = new BABYLON.Vector3(1.5, -1.5, 0); 
 
         const materialA = new BABYLON.StandardMaterial("materialA", scene);
@@ -75,25 +65,27 @@ async function init() {
         torus.material = materialA;
         octa.material = materialA;
 
+        let rad = 0.0;
+        scene.onBeforeRenderObservable.add(() => {
+            rad += Math.PI * 1.0 / 180.0 * scene.getAnimationRatio();
+
+            plane.rotation.y = rad;
+            cube.rotation.y = rad;
+            sphere.rotation.y = rad;
+            circle.rotation.y = rad;
+            cylinder.rotation.y = rad;
+            cone.rotation.y = rad;
+            knot.rotation.y = rad;
+            torus.rotation.y = rad;
+            octa.rotation.y = rad;
+        });
+
         return scene;
     }
 
     const scene = createScene();
 
-    let rad = 0.0;
-    engine.runRenderLoop(function () {
-        rad += Math.PI * 1.0 / 180.0;
-
-        plane.rotation.y = rad;
-        cube.rotation.y = rad;
-        sphere.rotation.y = rad;
-        circle.rotation.y = rad;
-        cylinder.rotation.y = rad;
-        cone.rotation.y = rad;
-        knot.rotation.y = rad;
-        torus.rotation.y = rad;
-        octa.rotation.y = rad;
-
+    engine.runRenderLoop(() => {
         scene.render();
     });
 }

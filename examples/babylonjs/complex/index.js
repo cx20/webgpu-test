@@ -3,12 +3,13 @@ async function init() {
     const engine = new BABYLON.WebGPUEngine(canvas);
     await engine.initAsync();
 
-    engine.enableOfflineSupport = false; // Suppress manifest reference
-
     const createScene = function() {
 
         const scene = new BABYLON.Scene(engine);
-        scene.clearColor = new BABYLON.Color3(1, 1, 1);
+        const camera = new BABYLON.ArcRotateCamera("camera", 0, 0, 0, BABYLON.Vector3.Zero(), scene);
+        camera.setPosition(new BABYLON.Vector3(0, 5, 15));
+        camera.attachControl(canvas, false, false);
+        scene.activeCamera = camera;
 
         const meshes = [];
 
@@ -43,10 +44,6 @@ async function init() {
                 meshes.push(mesh);
             })
         ]).then(() => {
-            const camera = new BABYLON.ArcRotateCamera("camera", 0, 0, 0, BABYLON.Vector3.Zero(), scene);
-            camera.setPosition(new BABYLON.Vector3(0, 5, 15));
-            camera.attachControl(canvas, false, false);
-            scene.activeCamera = camera;
             let light0 = new BABYLON.HemisphericLight("light0", new BABYLON.Vector3(1, 1, 0), scene); 
             let light1 = new BABYLON.DirectionalLight("dir01", new BABYLON.Vector3(0.0, -1.0, 0.5), scene);
             let light2 = new BABYLON.DirectionalLight("dir02", new BABYLON.Vector3(-0.5, -0.5, -0.5), scene);
@@ -133,15 +130,18 @@ async function init() {
             particleRightFront.start();
             particleLeftFront .start();
 
-            engine.runRenderLoop(function() {
-                scene.activeCamera.alpha -= 0.005;
-                scene.render();
+            scene.onBeforeRenderObservable.add(() => {
+                scene.activeCamera.alpha -= 0.005 * scene.getAnimationRatio();
             });
         });
         return scene;
     }
     
     const scene = createScene();
+
+    engine.runRenderLoop(() => {
+        scene.render();
+    });
 
     window.addEventListener('resize', function(){
         engine.resize();

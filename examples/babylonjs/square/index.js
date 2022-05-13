@@ -21,9 +21,9 @@ async function init() {
         return scene;
     }
 
-    const scene = createScene(engine);
+    const scene = createScene();
 
-    engine.runRenderLoop(function () {
+    engine.runRenderLoop(() => {
         scene.render();
     });
 
