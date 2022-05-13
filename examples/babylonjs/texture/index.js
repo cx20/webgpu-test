@@ -3,31 +3,28 @@ async function init() {
     const engine = new BABYLON.WebGPUEngine(canvas);
     await engine.initAsync();
 
-    let cube;
     const createScene = function() {
         const scene = new BABYLON.Scene(engine);
         const camera = new BABYLON.FreeCamera("camera", new BABYLON.Vector3(0, 0, -3), scene);
         scene.clearColor = new BABYLON.Color3(1, 1, 1);
-        cube = new BABYLON.Mesh.CreateBox('cube', 1.0, scene);
+        const cube = new BABYLON.Mesh.CreateBox('cube', 1.0, scene);
         const material = new BABYLON.StandardMaterial("material", scene);
         material.diffuseTexture = new BABYLON.Texture("../../../assets/textures/frog.jpg", scene);
         material.emissiveColor = new BABYLON.Color3(1, 1, 1);
         cube.material = material;
+
+        scene.onBeforeRenderObservable.add(() => {
+            cube.rotate(BABYLON.Axis.X, Math.PI * 1.0 / 180.0 * scene.getAnimationRatio(), BABYLON.Space.LOCAL);
+            cube.rotate(BABYLON.Axis.Y, Math.PI * 1.0 / 180.0 * scene.getAnimationRatio(), BABYLON.Space.LOCAL);
+            cube.rotate(BABYLON.Axis.Z, Math.PI * 1.0 / 180.0 * scene.getAnimationRatio(), BABYLON.Space.LOCAL);
+        });
+
         return scene;
     }
 
     const scene = createScene();
 
-    let rad = 0.0;
-    engine.runRenderLoop(function () {
-        rad += Math.PI * 1.0 / 180.0;
-        cube.rotation.x = rad;
-        cube.rotation.y = rad;
-        cube.rotation.z = rad;
-        scene.render();
-    });
-
-    engine.runRenderLoop(function () {
+    engine.runRenderLoop(() => {
         scene.render();
     });
 
