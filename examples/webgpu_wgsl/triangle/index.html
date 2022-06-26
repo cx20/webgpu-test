@@ -15,7 +15,7 @@ struct VertexOutput {
     @builtin(position) Position : vec4<f32>
 };
 
-@stage(vertex)
+@vertex
 fn main(input : VertexInput) -> VertexOutput {
     var output : VertexOutput;
     output.Position = vec4<f32>(input.position, 1.0);
@@ -24,7 +24,7 @@ fn main(input : VertexInput) -> VertexOutput {
 </script>
 
 <script id="fs" type="x-shader/x-fragment">
-@stage(fragment)
+@fragment
 fn main() -> @location(0) vec4<f32> {
     return vec4<f32>(0.0, 0.0, 1.0, 1.0);
 }
