@@ -17,7 +17,11 @@ async function init() {
 
     const ctx = c.getContext("webgpu");
     const format = gpu.getPreferredCanvasFormat();
-    ctx.configure({device: device, format: format});
+    ctx.configure({
+        device: device,
+        format: format,
+        alphaMode: "opaque"
+    });
 
     let vShaderModule = makeShaderModule_WGSL(device, vertexShaderWGSL);
     let fShaderModule = makeShaderModule_WGSL(device, fragmentShaderWGSL);
@@ -121,6 +125,7 @@ async function init() {
     let coordBuffer = makeVertexBuffer(device, new Float32Array(textureCoords));
     let indexBuffer = makeIndexBuffer(device, new Uint32Array(indices));
     const pipeline = device.createRenderPipeline({
+        layout: "auto",
         vertex: {
             module: vShaderModule,
             entryPoint: "main",

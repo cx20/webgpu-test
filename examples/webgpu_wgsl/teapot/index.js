@@ -28,6 +28,7 @@ async function init(glslang) {
     let indexBuffer;
 
     const pipeline = device.createRenderPipeline({
+        layout: "auto",
         vertex: {
             module: vShaderModule,
             entryPoint: "main",
@@ -206,7 +207,8 @@ async function init(glslang) {
 function configureSwapChain(device, format, context) {
     const swapChainDescriptor = {
         device: device,
-        format: format
+        format: format,
+        alphaMode: "opaque"
     };
     return context.configure(swapChainDescriptor);
 }

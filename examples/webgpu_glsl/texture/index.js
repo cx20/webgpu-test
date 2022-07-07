@@ -33,7 +33,8 @@ async function init() {
     const format = gpu.getPreferredCanvasFormat();
     ctx.configure({
         device: device,
-        format: format
+        format: format,
+        alphaMode: "opaque"
     });
 
     let vShaderModule = makeShaderModule_GLSL(libGlslang, libTwgsl, device, "vertex", vertexShaderGLSL);

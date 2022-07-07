@@ -114,6 +114,7 @@ async function init() {
     let indexBuffer = makeIndexBuffer(device, new Uint32Array(indices));
 
     const pipeline = device.createRenderPipeline({
+        layout: "auto",
         vertex: {
             module: vShaderModule,
             entryPoint: "main",

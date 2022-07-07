@@ -25,7 +25,8 @@ async function init() {
     const format = gpu.getPreferredCanvasFormat();
     ctx.configure({
         device: device,
-        format: format
+        format: format,
+        alphaMode: "opaque"
     });
 
     let vShaderModule = makeShaderModule_GLSL(libGlslang, libTwgsl, device, "vertex", vertexShaderGLSL);
@@ -63,6 +64,7 @@ async function init() {
     let colorBuffer = makeVertexBuffer(device, new Float32Array(colors));
 
     const pipeline = device.createRenderPipeline({
+        layout: "auto",
         vertex: {
             module: vShaderModule,
             entryPoint: "main",

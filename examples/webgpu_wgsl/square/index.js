@@ -50,6 +50,7 @@ async function init() {
     let colorBuffer = makeVertexBuffer(device, new Float32Array(colors));
 
     const pipeline = device.createRenderPipeline({
+        layout: "auto",
         vertex: {
             module: vShaderModule,
             entryPoint: "main",
@@ -119,7 +120,8 @@ async function init() {
 function configureSwapChain(device, format, context) {
     const swapChainDescriptor = {
         device: device,
-        format: format
+        format: format,
+        alphaMode: "opaque"
     };
     return context.configure(swapChainDescriptor);
 }
