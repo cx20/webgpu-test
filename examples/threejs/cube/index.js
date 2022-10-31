@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import WebGPURenderer from 'three/examples/jsm/renderers/webgpu/WebGPURenderer.js';
+import WebGPURenderer from 'three/addons/renderers/webgpu/WebGPURenderer.js';
+import * as Nodes from 'three/nodes';
 
 // NOTE: The shader currently used in the WebGPU Renderer's MeshBasicMaterial is the following code.
 //       Please note that you cannot specify the color because you are using a texture.
@@ -154,8 +155,10 @@ async function init() {
     geometry.setAttribute('normal', new THREE.Float32BufferAttribute(vertices, 3));
     geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2)); // TODO: If you do not specify the uv attribute, an error occurs
 
-    const material = new THREE.MeshBasicMaterial({ map: createDataTexture(), side: THREE.DoubleSide }); // TODO: Not color supported yet
-    mesh = new THREE.Mesh(geometry, material);
+	const material = new Nodes.MeshBasicNodeMaterial({ side: THREE.DoubleSide });
+	material.colorNode = new Nodes.PositionNode( Nodes.PositionNode.LOCAL );
+
+	mesh = new THREE.Mesh(geometry, material);
     scene.add(mesh);
 
     renderer = new WebGPURenderer();
@@ -180,18 +183,6 @@ function animate() {
     mesh.rotation.x += 0.01;
     mesh.rotation.y += 0.01;
     renderer.render( scene, camera );
-}
-
-function createDataTexture() {
-    const width = 4;
-    const height = 1;
-    const data = new Uint8Array([
-        255,   0,   0, 255,
-          0, 255,   0, 255,
-          0,   0, 255, 255,
-        255, 255,   0, 255,
-    ]);
-    return new THREE.DataTexture( data, width, height, THREE.RGBAFormat, undefined, undefined, undefined, undefined, THREE.LinearFilter, THREE.LinearFilter );
 }
 
 function error( error ) {
