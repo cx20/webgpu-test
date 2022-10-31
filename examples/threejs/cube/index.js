@@ -155,10 +155,10 @@ async function init() {
     geometry.setAttribute('normal', new THREE.Float32BufferAttribute(vertices, 3));
     geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2)); // TODO: If you do not specify the uv attribute, an error occurs
 
-	const material = new Nodes.MeshBasicNodeMaterial({ side: THREE.DoubleSide });
-	material.colorNode = new Nodes.PositionNode( Nodes.PositionNode.LOCAL );
+    const material = new Nodes.MeshBasicNodeMaterial({ side: THREE.DoubleSide });
+    material.colorNode = new Nodes.PositionNode( Nodes.PositionNode.LOCAL );
 
-	mesh = new THREE.Mesh(geometry, material);
+    mesh = new THREE.Mesh(geometry, material);
     scene.add(mesh);
 
     renderer = new WebGPURenderer();

@@ -75,17 +75,12 @@ async function init() {
         0.0, 0.0
     ]);
 
-	const helper = new THREE.GridHelper( 1000, 40, 0x303030, 0x303030 );
-	helper.material.colorNode = new Nodes.AttributeNode( 'color' );
-	helper.position.y = - 75;
-	scene.add( helper );
-
-	const geometry = new THREE.BufferGeometry();
+    const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
     geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2)); // TODO: If you do not specify the uv attribute, an error occurs
 
-	const material = new Nodes.MeshBasicNodeMaterial();
-	material.colorNode = new Nodes.UniformNode( new THREE.Color( 0x0000FF ) );
+    const material = new Nodes.MeshBasicNodeMaterial();
+    material.colorNode = new Nodes.UniformNode( new THREE.Color( 0x0000FF ) );
     const mesh = new THREE.Mesh(geometry, material);
     scene.add(mesh);
 

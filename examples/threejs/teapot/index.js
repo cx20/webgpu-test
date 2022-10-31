@@ -82,9 +82,9 @@ async function init() {
     loader.load('../../../assets/textures/arroway.de_metal+structure+06_d100_flat.jpg', texture => {
         texture.wrapS = THREE.RepeatWrapping;
         texture.wrapT = THREE.RepeatWrapping;
-		const material = new Nodes.MeshBasicNodeMaterial();
-		material.colorNode = new Nodes.TextureNode( texture );
-		mesh = new THREE.Mesh(geometry, material);
+        const material = new Nodes.MeshBasicNodeMaterial();
+        material.colorNode = new Nodes.TextureNode( texture );
+        mesh = new THREE.Mesh(geometry, material);
         scene.add(mesh);
     });
  
