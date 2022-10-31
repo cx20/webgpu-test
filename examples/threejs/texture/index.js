@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import WebGPURenderer from 'three/examples/jsm/renderers/webgpu/WebGPURenderer.js';
+import WebGPURenderer from 'three/addons/renderers/webgpu/WebGPURenderer.js';
+import * as Nodes from 'three/nodes';
 
 // NOTE: The shader currently used in the WebGPU Renderer's MeshBasicMaterial is the following code.
 //       Please note that you cannot specify the color because you are using a texture.

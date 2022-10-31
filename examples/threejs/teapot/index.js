@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import WebGPURenderer from 'three/examples/jsm/renderers/webgpu/WebGPURenderer.js';
+import WebGPURenderer from 'three/addons/renderers/webgpu/WebGPURenderer.js';
+import * as Nodes from 'three/nodes';
 
 // NOTE: The shader currently used in the WebGPU Renderer's MeshBasicMaterial is the following code.
 //       Please note that you cannot specify the color because you are using a texture.
@@ -81,9 +82,9 @@ async function init() {
     loader.load('../../../assets/textures/arroway.de_metal+structure+06_d100_flat.jpg', texture => {
         texture.wrapS = THREE.RepeatWrapping;
         texture.wrapT = THREE.RepeatWrapping;
-        //let material = new MeshLambertMaterial({map: texture}); // TODO: This material is not yet supported
-        let material = new THREE.MeshBasicMaterial({map: texture});
-        mesh = new THREE.Mesh(geometry, material);
+		const material = new Nodes.MeshBasicNodeMaterial();
+		material.colorNode = new Nodes.TextureNode( texture );
+		mesh = new THREE.Mesh(geometry, material);
         scene.add(mesh);
     });
  

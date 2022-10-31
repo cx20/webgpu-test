@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import WebGPURenderer from 'three/examples/jsm/renderers/webgpu/WebGPURenderer.js';
+import WebGPURenderer from 'three/addons/renderers/webgpu/WebGPURenderer.js';
+import * as Nodes from 'three/nodes';
 
 // NOTE: The shader currently used in the WebGPU Renderer's MeshBasicMaterial is the following code.
 //       Please note that you cannot specify the color because you are using a texture.
@@ -74,11 +75,17 @@ async function init() {
         0.0, 0.0
     ]);
 
-    const geometry = new THREE.BufferGeometry();
+	const helper = new THREE.GridHelper( 1000, 40, 0x303030, 0x303030 );
+	helper.material.colorNode = new Nodes.AttributeNode( 'color' );
+	helper.position.y = - 75;
+	scene.add( helper );
+
+	const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
     geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2)); // TODO: If you do not specify the uv attribute, an error occurs
 
-    const material = new THREE.MeshBasicMaterial({ map: createDataTexture() }); // TODO: Not color supported yet
+	const material = new Nodes.MeshBasicNodeMaterial();
+	material.colorNode = new Nodes.UniformNode( new THREE.Color( 0x0000FF ) );
     const mesh = new THREE.Mesh(geometry, material);
     scene.add(mesh);
 
@@ -102,33 +109,6 @@ function onWindowResize() {
 function animate() {
     requestAnimationFrame( animate );
     renderer.render( scene, camera );
-}
-
-function createDataTexture() {
-    const color = new THREE.Color( 0x0000ff );
-
-    const width = 1;
-    const height = 1;
-
-    const size = width * height;
-    const data = new Uint8Array( 4 * size );
-
-    const r = Math.floor( color.r * 255 );
-    const g = Math.floor( color.g * 255 );
-    const b = Math.floor( color.b * 255 );
-
-    for ( let i = 0; i < size; i ++ ) {
-
-        const stride = i * 4;
-
-        data[ stride ] = r;
-        data[ stride + 1 ] = g;
-        data[ stride + 2 ] = b;
-        data[ stride + 3 ] = 255;
-
-    }
-
-    return new THREE.DataTexture( data, width, height, THREE.RGBAFormat );
 }
 
 function error( error ) {
