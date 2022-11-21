@@ -15,5 +15,5 @@ cargo build --target wasm32-unknown-unknown --example square --release
 wasm-bindgen --out-dir target/generated --web target/wasm32-unknown-unknown/release/examples/square.wasm
 ```
 
-See the wgpu-rs [wiki article](https://github.com/gfx-rs/wgpu-rs/wiki/Running-on-the-Web-with-WebGPU-and-WebGL) for more details.
+See the wgpu-rs [wiki article](https://github.com/gfx-rs/wgpu/wiki/Running-on-the-Web-with-WebGPU-and-WebGL) for more details.
 
