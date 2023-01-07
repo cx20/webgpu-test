@@ -103,7 +103,8 @@ async function init(glslang) {
     // copy from: https://github.com/gpjt/webgl-lessons/blob/master/lesson14/arroway.de_metal%2Bstructure%2B06_d100_flat.jpg
     const cubeTexture = await createTextureFromImage(device, "../../../assets/textures/arroway.de_metal+structure+06_d100_flat.jpg", GPUTextureUsage.TEXTURE_BINDING);
     
-    const uniformLightBufferSize = 4 * 3; // 4 x vec3
+    //const uniformLightBufferSize = 4 * 3; // 4 x vec3
+    const uniformLightBufferSize = 4 * 4; // TODO:  minimum binding size (16)
     const uniformLightBuffer = device.createBuffer({
         size: uniformLightBufferSize,
         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,

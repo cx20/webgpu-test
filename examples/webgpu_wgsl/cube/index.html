@@ -13,40 +13,34 @@ struct Uniforms {
 };
 @binding(0) @group(0) var<uniform> uniforms : Uniforms;
 
-struct VertexInput {
-    @location(0) position : vec3<f32>,
-    @location(1) color : vec4<f32>
-};
-
 struct VertexOutput {
     @builtin(position) Position : vec4<f32>,
     @location(0) fragColor : vec4<f32>
-};
+}
 
 @vertex
-fn main(input : VertexInput) -> VertexOutput {
+fn main(
+    @location(0) position : vec3<f32>,
+    @location(1) color : vec4<f32>
+) -> VertexOutput {
     var output : VertexOutput;
-    output.fragColor = input.color;
-    output.Position = uniforms.modelViewProjectionMatrix * vec4<f32>(input.position, 1.0);
+    output.fragColor = color;
+    output.Position = uniforms.modelViewProjectionMatrix * vec4<f32>(position, 1.0);
     return output;
 }
 
 </script>
 
 <script id="fs" type="x-shader/x-fragment">
-struct FragmentInput {
-    @location(0) fragColor : vec4<f32>
-};
-
 struct FragmentOutput {
     @location(0) outColor : vec4<f32>
-};
+}
 
 @fragment
-fn main(input : FragmentInput) -> FragmentOutput {
-    var output : FragmentOutput;
-    output.outColor = input.fragColor;
-    return output;
+fn main(
+    @location(0) fragColor : vec4<f32>
+) -> @location(0) vec4<f32> {
+    return fragColor;
 }
 </script>
 <canvas id="c" width="465" height="465"></canvas>
