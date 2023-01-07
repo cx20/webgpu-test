@@ -13,21 +13,19 @@ struct Uniforms {
 };
 @binding(0) @group(0) var<uniform> uniforms : Uniforms;
 
-struct VertexInput {
-    @location(0) position : vec3<f32>,
-    @location(1) textureCoord : vec2<f32>
-};
-
 struct VertexOutput {
     @builtin(position) Position : vec4<f32>,
     @location(0) vTextureCoord : vec2<f32>
-};
+}
 
 @vertex
-fn main(input : VertexInput) -> VertexOutput {
+fn main(
+    @location(0) position : vec3<f32>,
+    @location(1) textureCoord : vec2<f32>
+) -> VertexOutput {
     var output : VertexOutput;
-    output.vTextureCoord = input.textureCoord;
-    output.Position = uniforms.modelViewProjectionMatrix * vec4<f32>(input.position, 1.0);
+    output.vTextureCoord = textureCoord;
+    output.Position = uniforms.modelViewProjectionMatrix * vec4<f32>(position, 1.0);
     return output;
 }
 </script>
@@ -36,18 +34,16 @@ fn main(input : VertexInput) -> VertexOutput {
 @binding(1) @group(0) var mySampler : sampler;
 @binding(2) @group(0) var myTexture : texture_2d<f32>;
 
-struct FragmentInput {
-    @location(0) vTextureCoord : vec2<f32>
-};
-
 struct FragmentOutput {
     @location(0) outColor : vec4<f32>
 };
 
 @fragment
-fn main(input : FragmentInput) -> FragmentOutput {
+fn main(
+    @location(0) vTextureCoord : vec2<f32>
+) -> FragmentOutput {
     var output : FragmentOutput;
-    output.outColor = textureSample(myTexture, mySampler, input.vTextureCoord);
+    output.outColor = textureSample(myTexture, mySampler, vTextureCoord);
     return output;
 }
 </script>

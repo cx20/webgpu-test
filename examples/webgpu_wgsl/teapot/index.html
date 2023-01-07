@@ -11,29 +11,27 @@
 <script id="vs" type="x-shader/x-vertex">
 struct Uniforms {
     modelViewProjectionMatrix : mat4x4<f32>
-};
+}
 @binding(0) @group(0) var<uniform> uniforms : Uniforms;
-
-struct VertexInput {
-    @location(0) position : vec3<f32>,
-    @location(1) normal : vec3<f32>,
-    @location(2) textureCoord : vec2<f32>
-};
 
 struct VertexOutput {
     @builtin(position) Position : vec4<f32>,
     @location(0) vPosition : vec4<f32>,
     @location(1) vNormal : vec3<f32>,
     @location(2) vTextureCoord : vec2<f32>
-};
+}
 
 @vertex
-fn main(input : VertexInput) -> VertexOutput {
+fn main(
+    @location(0) position : vec3<f32>,
+    @location(1) normal : vec3<f32>,
+    @location(2) textureCoord : vec2<f32>
+) -> VertexOutput {
     var output : VertexOutput;
-    output.vPosition = uniforms.modelViewProjectionMatrix * vec4<f32>(input.position, 1.0);
-    output.vNormal = input.normal;
-    output.vTextureCoord = input.textureCoord;
-    output.Position = uniforms.modelViewProjectionMatrix * vec4<f32>(input.position, 1.0);
+    output.vPosition = uniforms.modelViewProjectionMatrix * vec4<f32>(position, 1.0);
+    output.vNormal = normal;
+    output.vTextureCoord = textureCoord;
+    output.Position = uniforms.modelViewProjectionMatrix * vec4<f32>(position, 1.0);
     return output;
 }
 </script>
@@ -44,26 +42,24 @@ fn main(input : VertexInput) -> VertexOutput {
 
 struct Uniforms {
     pointLightingLocation : vec3<f32>
-};
+}
 @binding(3) @group(0) var<uniform> uniforms : Uniforms;
-
-struct FragmentInput {
-    @location(0) vPosition: vec4<f32>,
-    @location(1) vNormal: vec3<f32>,
-    @location(2) vTextureCoord: vec2<f32>
-};
 
 struct FragmentOutput {
     @location(0) outColor : vec4<f32>
 };
 
 @fragment
-fn main(input : FragmentInput) -> FragmentOutput {
+fn main(
+    @location(0) vPosition: vec4<f32>,
+    @location(1) vNormal: vec3<f32>,
+    @location(2) vTextureCoord: vec2<f32>
+) -> FragmentOutput {
     var output : FragmentOutput;
-    var lightDirection: vec3<f32> = normalize(uniforms.pointLightingLocation - input.vPosition.xyz);
-    var normal: vec3<f32> = normalize(input.vNormal);
+    var lightDirection: vec3<f32> = normalize(uniforms.pointLightingLocation - vPosition.xyz);
+    var normal: vec3<f32> = normalize(vNormal);
     var lightWeighting: f32 = max(dot(normal, lightDirection), 0.0);
-    var fragmentColor: vec4<f32> =  textureSample(myTexture, mySampler, input.vTextureCoord);
+    var fragmentColor: vec4<f32> = textureSample(myTexture, mySampler, vTextureCoord);
     output.outColor = vec4<f32>(fragmentColor.rgb * lightWeighting, fragmentColor.a);
     return output;
 }
