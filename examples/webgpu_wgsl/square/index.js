@@ -1,6 +1,6 @@
-init();
 const vertexShaderWGSL = document.getElementById("vs").textContent;
 const fragmentShaderWGSL = document.getElementById("fs").textContent;
+init();
 
 async function init() {
     const gpu = navigator["gpu"];
@@ -11,9 +11,12 @@ async function init() {
     c.width = window.innerWidth;
     c.height = window.innerHeight;
     const ctx = c.getContext("webgpu");
-
     const format = gpu.getPreferredCanvasFormat();
-    const swapChain = configureSwapChain(device, format, ctx);
+    ctx.configure({
+        device: device,
+        format: format,
+        alphaMode: "opaque"
+    });
 
     let vShaderModule = makeShaderModule_WGSL(device, vertexShaderWGSL);
     let fShaderModule = makeShaderModule_WGSL(device, fragmentShaderWGSL);
@@ -115,15 +118,6 @@ async function init() {
         requestAnimationFrame(render);
     }
     requestAnimationFrame(render);
-}
-
-function configureSwapChain(device, format, context) {
-    const swapChainDescriptor = {
-        device: device,
-        format: format,
-        alphaMode: "opaque"
-    };
-    return context.configure(swapChainDescriptor);
 }
 
 function makeShaderModule_WGSL(device, source) {

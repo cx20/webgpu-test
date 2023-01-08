@@ -1,6 +1,6 @@
-init();
 const vertexShaderWGSL = document.getElementById("vs").textContent;
 const fragmentShaderWGSL = document.getElementById("fs").textContent;
+init();
 
 async function init() {
     const gpu = navigator["gpu"];
