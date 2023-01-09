@@ -1,6 +1,6 @@
 # triangle
 
-This example renders a triangle to a window.
+This example renders a square to a window.
 
 ## How To Build
 
