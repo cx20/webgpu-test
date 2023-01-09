@@ -138,6 +138,7 @@ async function init() {
     let vertexBuffer = makeVertexBuffer(device, new Float32Array(positions));
     let coordBuffer = makeVertexBuffer(device, new Float32Array(textureCoords));
     let indexBuffer = makeIndexBuffer(device, new Uint32Array(indices));
+	let indexNum = indices.length;
 
     const uniformsBindGroupLayout = device.createBindGroupLayout({
         entries: [{
@@ -219,7 +220,7 @@ async function init() {
         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
-    const cubeTexture = await createTextureFromImage(device, "../../../assets/textures/frog.jpg", GPUTextureUsage.TEXTURE_BINDING);
+    const cubeTexture = await createTextureFromImage(device, "../../../assets/textures/frog.jpg");
     
     const sampler = device.createSampler({
         magFilter: "linear",
@@ -295,7 +296,7 @@ async function init() {
         passEncoder.setVertexBuffer(1, coordBuffer);
         passEncoder.setIndexBuffer(indexBuffer, "uint32");
         passEncoder.setBindGroup(0, uniformBindGroup);
-        passEncoder.drawIndexed(indexBuffer.pointNum, 1, 0, 0, 0);
+        passEncoder.drawIndexed(indexNum, 1, 0, 0, 0);
         passEncoder.end();
         device.queue.submit([commandEncoder.finish()]);
         uploadBuffer.destroy();
@@ -336,7 +337,6 @@ function makeIndexBuffer(device, data) {
         mappedAtCreation: true
     });
     new Uint32Array(indicesBuffer.getMappedRange()).set(data);
-    indicesBuffer.pointNum = data.length;
     indicesBuffer.unmap();
     return indicesBuffer;
 }
@@ -357,7 +357,7 @@ function updateBufferData(device, dst, dstOffset, src, commandEncoder) {
     return { commandEncoder, uploadBuffer };
 }
 
-async function createTextureFromImage(device, src, usage) {
+async function createTextureFromImage(device, src) {
     const img = document.createElement("img");
     img.src = src;
     await img.decode();
@@ -366,7 +366,10 @@ async function createTextureFromImage(device, src, usage) {
     cubeTexture = device.createTexture({
       size: [imageBitmap.width, imageBitmap.height, 1],
       format: 'rgba8unorm',
-      usage: usage | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
+      usage: 
+	  	GPUTextureUsage.TEXTURE_BINDING | 
+		GPUTextureUsage.COPY_DST | 
+		GPUTextureUsage.RENDER_ATTACHMENT,
     });
     device.queue.copyExternalImageToTexture(
       { source: imageBitmap },

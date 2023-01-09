@@ -2,7 +2,7 @@ const vertexShaderWGSL = document.getElementById("vs").textContent;
 const fragmentShaderWGSL = document.getElementById("fs").textContent;
 init();
 
-async function init(glslang) {
+async function init() {
     const gpu = navigator["gpu"];
     const adapter = await gpu.requestAdapter();
     const device = await adapter.requestDevice();
@@ -120,6 +120,7 @@ async function init(glslang) {
     let vertexBuffer = makeVertexBuffer(device, new Float32Array(positions));
     let coordBuffer = makeVertexBuffer(device, new Float32Array(textureCoords));
     let indexBuffer = makeIndexBuffer(device, new Uint32Array(indices));
+    let indexNum = indices.length;
 
     const pipeline = device.createRenderPipeline({
         layout: "auto",
@@ -179,7 +180,7 @@ async function init(glslang) {
         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
-    const cubeTexture = await createTextureFromImage(device, "../../../assets/textures/frog.jpg", GPUTextureUsage.TEXTURE_BINDING);
+    const cubeTexture = await createTextureFromImage(device, "../../../assets/textures/frog.jpg");
     
     const sampler = device.createSampler({
         magFilter: "linear",
@@ -292,11 +293,11 @@ async function init(glslang) {
 
         // 1st Cube
         passEncoder.setBindGroup(0, uniformBindGroup1);
-        passEncoder.drawIndexed(indexBuffer.pointNum, 1, 0, 0, 0);
+        passEncoder.drawIndexed(indexNum, 1, 0, 0, 0);
 
         // 2nd Cube
         passEncoder.setBindGroup(0, uniformBindGroup2);
-        passEncoder.drawIndexed(indexBuffer.pointNum, 1, 0, 0, 0);
+        passEncoder.drawIndexed(indexNum, 1, 0, 0, 0);
 
         passEncoder.end();
 
@@ -343,7 +344,6 @@ function makeIndexBuffer(device, data) {
         mappedAtCreation: true
     });
     new Uint32Array(indicesBuffer.getMappedRange()).set(data);
-    indicesBuffer.pointNum = data.length;
     indicesBuffer.unmap();
     return indicesBuffer;
 }
@@ -364,7 +364,7 @@ function updateBufferData(device, dst, dstOffset, src, commandEncoder) {
     return { commandEncoder, uploadBuffer };
 }
 
-async function createTextureFromImage(device, src, usage) {
+async function createTextureFromImage(device, src) {
     const img = document.createElement("img");
     img.src = src;
     await img.decode();
@@ -373,7 +373,10 @@ async function createTextureFromImage(device, src, usage) {
     cubeTexture = device.createTexture({
       size: [imageBitmap.width, imageBitmap.height, 1],
       format: 'rgba8unorm',
-      usage: usage | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
+      usage: 
+	  	GPUTextureUsage.TEXTURE_BINDING | 
+		GPUTextureUsage.COPY_DST | 
+		GPUTextureUsage.RENDER_ATTACHMENT
     });
     device.queue.copyExternalImageToTexture(
       { source: imageBitmap },

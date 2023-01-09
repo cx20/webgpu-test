@@ -102,6 +102,7 @@ async function init() {
     let vertexBuffer = makeVertexBuffer(device, new Float32Array(positions));
     let colorBuffer = makeVertexBuffer(device, new Float32Array(unpackedColors));
     let indexBuffer = makeIndexBuffer(device, new Uint32Array(indices));
+    let indexNum = indices.length;
 
     const pipeline = device.createRenderPipeline({
         layout: "auto",
@@ -221,7 +222,7 @@ async function init() {
         passEncoder.setVertexBuffer(1, colorBuffer);
         passEncoder.setIndexBuffer(indexBuffer, "uint32");
         passEncoder.setBindGroup(0, uniformBindGroup);
-        passEncoder.drawIndexed(indexBuffer.pointNum, 1, 0, 0, 0);
+        passEncoder.drawIndexed(indexNum, 1, 0, 0, 0);
         passEncoder.end();
         device.queue.submit([commandEncoder.finish()]);
         uploadBuffer.destroy();
@@ -256,7 +257,6 @@ function makeIndexBuffer(device, data) {
         mappedAtCreation: true
     });
     new Uint32Array(indicesBuffer.getMappedRange()).set(data);
-    indicesBuffer.pointNum = data.length;
     indicesBuffer.unmap();
     return indicesBuffer;
 }

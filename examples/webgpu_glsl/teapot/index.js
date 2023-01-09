@@ -41,6 +41,7 @@ async function init() {
     let normalBuffer;
     let coordBuffer;
     let indexBuffer;
+	let indexNum;
 
     const pipeline = device.createRenderPipeline({
         layout: "auto",
@@ -116,7 +117,7 @@ async function init() {
     });
 
     // copy from: https://github.com/gpjt/webgl-lessons/blob/master/lesson14/arroway.de_metal%2Bstructure%2B06_d100_flat.jpg
-    const cubeTexture = await createTextureFromImage(device, "../../../assets/textures/arroway.de_metal+structure+06_d100_flat.jpg", GPUTextureUsage.TEXTURE_BINDING);
+    const cubeTexture = await createTextureFromImage(device, "../../../assets/textures/arroway.de_metal+structure+06_d100_flat.jpg");
     
     //const uniformLightBufferSize = 4 * 3; // 4 x vec3
     const uniformLightBufferSize = 4 * 4; // TODO:  minimum binding size (16)
@@ -201,7 +202,7 @@ async function init() {
         passEncoder.setVertexBuffer(2, coordBuffer);
         passEncoder.setIndexBuffer(indexBuffer, "uint32");
         passEncoder.setBindGroup(0, uniformBindGroup);
-        passEncoder.drawIndexed(indexBuffer.pointNum, 1, 0, 0, 0);
+        passEncoder.drawIndexed(indexNum, 1, 0, 0, 0);
         passEncoder.end();
         device.queue.submit([commandEncoder.finish()]);
         uploadBuffer1.destroy();
@@ -215,6 +216,7 @@ async function init() {
         normalBuffer = makeVertexBuffer(device, new Float32Array(data.vertexNormals));
         coordBuffer = makeVertexBuffer(device, new Float32Array(data.vertexTextureCoords));
         indexBuffer = makeIndexBuffer(device, new Uint32Array(data.indices));
+		indexNum = data.indices.length;
 
         requestAnimationFrame(render);
     });
@@ -252,7 +254,6 @@ function makeIndexBuffer(device, data) {
         mappedAtCreation: true
     });
     new Uint32Array(indicesBuffer.getMappedRange()).set(data);
-    indicesBuffer.pointNum = data.length;
     indicesBuffer.unmap();
     return indicesBuffer;
 }
@@ -273,7 +274,7 @@ function updateBufferData(device, dst, dstOffset, src, commandEncoder) {
     return { commandEncoder, uploadBuffer };
 }
 
-async function createTextureFromImage(device, src, usage) {
+async function createTextureFromImage(device, src) {
     const img = document.createElement("img");
     img.src = src;
     await img.decode();
@@ -282,7 +283,10 @@ async function createTextureFromImage(device, src, usage) {
     cubeTexture = device.createTexture({
       size: [imageBitmap.width, imageBitmap.height, 1],
       format: 'rgba8unorm',
-      usage: usage | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
+      usage: 
+	  	GPUTextureUsage.TEXTURE_BINDING | 
+		GPUTextureUsage.COPY_DST | 
+		GPUTextureUsage.RENDER_ATTACHMENT,
     });
     device.queue.copyExternalImageToTexture(
       { source: imageBitmap },
