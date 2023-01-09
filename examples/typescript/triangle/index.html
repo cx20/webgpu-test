@@ -1,13 +1,33 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8">
-  <title>Hello, World!</title>
+  <title>[WebGPU][WGSL] Testing Triangle Using TS+WGSL</title>
   <link rel="stylesheet" type="text/css" href="style.css">
   <meta http-equiv="origin-trial" content="Ams4L09DqtXyh2wxkT7XUKmWMlyEzrDvZWfIBelgr3ks1iOXbAzjOq14Jxt27CLKHdD8SmUGQ/R1q2aBdx9gRAAAAABheyJvcmlnaW4iOiJodHRwczovL2N4MjAuZ2l0aHViLmlvOjQ0MyIsImZlYXR1cmUiOiJXZWJHUFUiLCJleHBpcnkiOjE2NzUyMDk1OTksImlzU3ViZG9tYWluIjp0cnVlfQ==">
 </head>
 <body>
-  <canvas id="canvas" width="640" height="480"></canvas>
-  <script src="bundle.js"></script>
+<script id="vs" type="x-shader/x-vertex">
+struct VertexOutput {
+    @builtin(position) Position : vec4<f32>
+}
+
+@vertex
+fn main(
+    @location(0) position : vec3<f32>
+) -> VertexOutput {
+    var output : VertexOutput;
+    output.Position = vec4<f32>(position, 1.0);
+    return output;
+}
+</script>
+
+<script id="fs" type="x-shader/x-fragment">
+@fragment
+fn main() -> @location(0) vec4<f32> {
+    return vec4<f32>(0.0, 0.0, 1.0, 1.0);
+}
+</script>
+<canvas id="c" width="465" height="465"></canvas>
+<script src="bundle.js"></script>
 </body>
 </html>

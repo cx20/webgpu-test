@@ -1,54 +1,21 @@
-const vertexShaderWGSL = `
-
-struct VertexOutput {
-    @builtin(position) Position : vec4<f32>,
-    @location(0) fragColor : vec4<f32>
-}
-
-@vertex
-fn main(
-    @location(0) position : vec3<f32>,
-    @location(1) color : vec4<f32>
-) -> VertexOutput {
-    var output : VertexOutput;
-    output.fragColor = color;
-    output.Position = vec4<f32>(position, 1.0);
-    return output;
-}`;
-const fragmentShaderWGSL = `
-
-struct FragmentOutput {
-    @location(0) outColor : vec4<f32>
-}
-
-@fragment
-fn main(
-    @location(0) fragColor : vec4<f32>
-) -> FragmentOutput {
-    var output : FragmentOutput;
-    output.outColor = fragColor;
-    return output;
-}
-`;
-
-const main = () => {
-    init();
-}
+const vertexShaderWGSL = document.getElementById("vs").textContent;
+const fragmentShaderWGSL = document.getElementById("fs").textContent;
+init();
 
 async function init() {
-    const gpu = navigator.gpu;
+    const gpu = navigator["gpu"];
     const adapter = await gpu.requestAdapter() as GPUAdapter;
     const device = await adapter.requestDevice() as GPUDevice;
 
-    const c = document.getElementById("canvas") as HTMLCanvasElement;
+    const c = document.getElementById("c") as HTMLCanvasElement;
     c.width = window.innerWidth;
     c.height = window.innerHeight;
     const ctx = c.getContext("webgpu") as GPUCanvasContext;
-    const format = navigator.gpu.getPreferredCanvasFormat();
+    const format = gpu.getPreferredCanvasFormat();
     ctx.configure({
-      device,
-      format: format,
-      alphaMode: 'opaque'
+        device: device,
+        format: format,
+        alphaMode: "opaque"
     });
 
     let vShaderModule = makeShaderModule_WGSL(device, vertexShaderWGSL);
@@ -59,13 +26,7 @@ async function init() {
         -0.5,-0.5, 0.0, // v1
          0.5,-0.5, 0.0  // v2
     ];
-    let colors = [ 
-        1.0, 0.0, 0.0, 1.0, // v0
-        0.0, 1.0, 0.0, 1.0, // v1
-        0.0, 0.0, 1.0, 1.0  // v2
-    ];
     let vertexBuffer = makeVertexBuffer(device, new Float32Array(positions));
-    let colorBuffer = makeVertexBuffer(device, new Float32Array(colors));
 
     const pipeline = device.createRenderPipeline({
         layout: "auto",
@@ -83,17 +44,6 @@ async function init() {
                             format: "float32x3"
                         }
                     ]
-                },
-                {
-                    arrayStride: 4 * 4,
-                    attributes: [
-                        {
-                            // color
-                            shaderLocation: 1,
-                            offset:  0,
-                            format: "float32x4"
-                        }
-                    ]
                 }
             ]
         },
@@ -107,8 +57,8 @@ async function init() {
             ]
         },
         primitive: {
-            topology: "triangle-strip"
-        },
+            topology: "triangle-list"
+        }
     });
 
     let render = function () {
@@ -117,15 +67,14 @@ async function init() {
         const renderPassDescriptor: GPURenderPassDescriptor = {
             colorAttachments: [{
                 view: textureView,
-                clearValue: {r: 1.0, g: 1.0, b: 1.0, a: 1.0},
                 loadOp: "clear",
+                clearValue: {r: 1, g: 1, b: 1, a: 1},
                 storeOp: "store"
             }]
         };
         const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
         passEncoder.setPipeline(pipeline);
         passEncoder.setVertexBuffer(0, vertexBuffer);
-        passEncoder.setVertexBuffer(1, colorBuffer);
         passEncoder.draw(3, 1, 0, 0);
         passEncoder.end();
         device.queue.submit([commandEncoder.finish()]);
@@ -152,5 +101,3 @@ function makeVertexBuffer(device: GPUDevice, data: any) {
     verticesBuffer.unmap();
     return verticesBuffer;
 }
-
-window.onload = main;
