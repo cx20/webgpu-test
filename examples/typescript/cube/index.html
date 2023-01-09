@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>[WebGPU][WGSL] Testing Cube Using TS+WGSL</title>
+  <link rel="stylesheet" type="text/css" href="style.css">
+  <meta http-equiv="origin-trial" content="Ams4L09DqtXyh2wxkT7XUKmWMlyEzrDvZWfIBelgr3ks1iOXbAzjOq14Jxt27CLKHdD8SmUGQ/R1q2aBdx9gRAAAAABheyJvcmlnaW4iOiJodHRwczovL2N4MjAuZ2l0aHViLmlvOjQ0MyIsImZlYXR1cmUiOiJXZWJHUFUiLCJleHBpcnkiOjE2NzUyMDk1OTksImlzU3ViZG9tYWluIjp0cnVlfQ==">
+</head>
+<body>
+<!-- <script src="../../../libs/gl-matrix.js"></script> -->
+<script id="vs" type="x-shader/x-vertex">
+struct Uniforms {
+    modelViewProjectionMatrix : mat4x4<f32>
+};
+@binding(0) @group(0) var<uniform> uniforms : Uniforms;
+
+struct VertexOutput {
+    @builtin(position) Position : vec4<f32>,
+    @location(0) fragColor : vec4<f32>
+}
+
+@vertex
+fn main(
+    @location(0) position : vec3<f32>,
+    @location(1) color : vec4<f32>
+) -> VertexOutput {
+    var output : VertexOutput;
+    output.fragColor = color;
+    output.Position = uniforms.modelViewProjectionMatrix * vec4<f32>(position, 1.0);
+    return output;
+}
+
+</script>
+
+<script id="fs" type="x-shader/x-fragment">
+struct FragmentOutput {
+    @location(0) outColor : vec4<f32>
+}
+
+@fragment
+fn main(
+    @location(0) fragColor : vec4<f32>
+) -> @location(0) vec4<f32> {
+    return fragColor;
+}
+</script>
+<canvas id="c" width="465" height="465"></canvas>
+<script src="bundle.js"></script>
+</body>
+</html>
