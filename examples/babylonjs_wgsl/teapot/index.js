@@ -14,11 +14,7 @@ async function init() {
         const camera = new BABYLON.FreeCamera("camera", new BABYLON.Vector3(0, 0, -50), scene);
         const light1 = new BABYLON.DirectionalLight("dir01", new BABYLON.Vector3(1.0, 0.0, 1.0), scene);
         scene.clearColor = new BABYLON.Color3(0, 0, 0);
-/*
-        const material = new BABYLON.StandardMaterial("material", scene);
-        // copy from: https://github.com/gpjt/webgl-lessons/blob/master/lesson14/arroway.de_metal%2Bstructure%2B06_d100_flat.jpg
-        material.diffuseTexture = new BABYLON.Texture("../../../assets/textures/arroway.de_metal+structure+06_d100_flat.jpg", scene);
-*/
+
         teapotMesh = new BABYLON.Mesh("teapot", scene);
         teapotMesh.setVerticesData(BABYLON.VertexBuffer.PositionKind, vertexPositions, false);
         teapotMesh.setVerticesData(BABYLON.VertexBuffer.NormalKind, vertexNormals, false);
@@ -43,8 +39,7 @@ async function init() {
         sampler.samplingMode = BABYLON.Constants.TEXTURE_NEAREST_SAMPLINGMODE;
         material.setTextureSampler("mySampler", sampler);
         
-    	material.setVector3("uPointLightingLocation", new BABYLON.Vector3(100.0, 0.0, 100.0));
-		//material.setFloats("uPointLightingLocation", [100.0, 0.0, 100.0]);
+        material.setVector3("uPointLightingLocation", new BABYLON.Vector3(100.0, 0.0, 100.0));
 
         teapotMesh.material = material;
         teapotMesh.material.backFaceCulling = false;
