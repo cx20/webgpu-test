@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>[WebGPU] Testing Cube Using Babylon.js</title>
+  <title>[WebGPU] Testing Textured Cube Using Babylon.js</title>
   <link rel="stylesheet" type="text/css" href="style.css">
   <script src="https://cx20.github.io/gltf-test/libs/babylonjs/5.40.0/babylon.js"></script>
 </head>
@@ -12,23 +12,26 @@
 #include<meshUboDeclaration>
 
 attribute position : vec3<f32>;
-attribute color : vec4<f32>;
+attribute uv: vec2<f32>;
 
-varying vColor : vec4<f32>;
+varying vUV : vec2<f32>;
 
 @vertex
 fn main(input : VertexInputs) -> FragmentInputs {
-    vColor = color;
+    vUV = uv;
     gl_Position =  scene.viewProjection * mesh.world * vec4<f32>(position, 1.0);
 }
 </script>
 
 <script id="fs" type="x-shader/x-fragment">
-varying vColor : vec4<f32>;
+varying vUV : vec2<f32>;
+
+var diffuse : texture_2d<f32>;
+var mySampler : sampler;
 
 @fragment
 fn main(input : FragmentInputs) -> FragmentOutputs {
-    gl_FragColor = vColor;
+    gl_FragColor = textureSample(diffuse, mySampler, vUV);
 }
 </script>
 
