@@ -2,9 +2,9 @@
 const canvas = document.querySelector('#c');
 canvas.width = innerWidth;
 canvas.height = innerHeight;
-const adapter = await navigator.gpu.requestAdapter();
+const gpu = navigator["gpu"];
+const adapter = await gpu.requestAdapter();
 const device = await adapter.requestDevice();
-const glslang = await glslangModule();
 
 const stage = new Hilo3d.Node();
 const camera = new Hilo3d.PerspectiveCamera({
@@ -66,12 +66,11 @@ const vs = document.getElementById("vs").textContent;
 const fs = document.getElementById("fs").textContent;
 
 const context = canvas.getContext('webgpu');
-
-const swapChainFormat = "bgra8unorm";
-
-const swapChain = context.configure({
-    device,
-    format: swapChainFormat,
+const format = gpu.getPreferredCanvasFormat();
+context.configure({
+    device: device,
+    format: format,
+    alphaMode: "opaque"
 });
 
 const verticesData = geometry.vertices.data;
@@ -108,7 +107,7 @@ const pipeline = device.createRenderPipeline({
     layout: pipelineLayout,
     vertex: {
         module: device.createShaderModule({
-            code: glslang.compileGLSL(vs, "vertex")
+            code: vs
         }),
         entryPoint: "main",
         buffers: [
@@ -138,12 +137,12 @@ const pipeline = device.createRenderPipeline({
     },
     fragment: {
         module: device.createShaderModule({
-            code: glslang.compileGLSL(fs, "fragment")
+            code: fs
         }),
         entryPoint: "main",
         targets: [
             {
-                format: swapChainFormat
+                format: format
             }
         ]
     },
@@ -158,7 +157,8 @@ function render() {
     const renderPassDescriptor = {
         colorAttachments: [{
             view: textureView,
-            loadValue: {r: 1, g: 1, b: 1, a: 1},
+            loadOp: "clear",
+            clearValue: {r: 1, g: 1, b: 1, a: 1},
             storeOp: "store"
         }]
     };
@@ -168,7 +168,7 @@ function render() {
     passEncoder.setVertexBuffer(1, colorsBuffer);
     passEncoder.setIndexBuffer(indicesBuffer, "uint16");
     passEncoder.drawIndexed(geometry.indices.count, 1, 0, 0, 0);
-    passEncoder.endPass();
+    passEncoder.end();
 
     device.queue.submit([commandEncoder.finish()]);
 }

@@ -6,32 +6,43 @@
   <meta http-equiv="origin-trial" content="AlwoJF9jpLJ1PEbLdDSbM9EL9SF0MvlkRNNdf/6iptGodRWO9KPvYIeIoGsCA/FJYjw59oaPagIzGobC9+bPJg8AAABheyJvcmlnaW4iOiJodHRwczovL2N4MjAuZ2l0aHViLmlvOjQ0MyIsImZlYXR1cmUiOiJXZWJHUFUiLCJleHBpcnkiOjE2OTE3MTE5OTksImlzU3ViZG9tYWluIjp0cnVlfQ==">
 </head>
 <body>
-<script src="https://06wj.github.io/WebGPU-Playground/libs/glslang/web-devel/glslang.js"></script>
 <script src="https://06wj.github.io/WebGPU-Playground/libs/gl-matrix/gl-matrix-min.js"></script>
 <script src="https://06wj.github.io/WebGPU-Playground/libs/helpers.js"></script>
 <script src="https://06wj.github.io/WebGPU-Playground/libs/hilo3d/Hilo3d.js"></script>
 <script id="vs" type="x-shader/x-vertex">
-#version 450
-layout(set=0, binding=0) uniform VertexUniforms{
-    mat4 u_modelViewProjectionMatrix;
+struct Uniforms {
+    modelViewProjectionMatrix : mat4x4<f32>
 };
+@binding(0) @group(0) var<uniform> uniforms : Uniforms;
 
-layout(location = 0) in vec3 a_position;
-layout(location = 1) in vec4 a_color;
-layout(location = 0) out vec4 vColor;
-void main() {
-    vec4 pos = vec4(a_position, 1.0);
-    vColor = a_color;
-    gl_Position = u_modelViewProjectionMatrix * pos;
+struct VertexOutput {
+    @builtin(position) Position : vec4<f32>,
+    @location(0) fragColor : vec4<f32>
 }
+
+@vertex
+fn main(
+    @location(0) position : vec3<f32>,
+    @location(1) color : vec4<f32>
+) -> VertexOutput {
+    var output : VertexOutput;
+    output.fragColor = color;
+    output.Position = uniforms.modelViewProjectionMatrix * vec4<f32>(position, 1.0);
+    return output;
+}
+
 </script>
 
 <script id="fs" type="x-shader/x-fragment">
-#version 450
-layout(location = 0) in vec4 vColor;
-layout(location = 0) out vec4 fragColor;
-void main() {
-    fragColor = vColor;
+struct FragmentOutput {
+    @location(0) outColor : vec4<f32>
+}
+
+@fragment
+fn main(
+    @location(0) fragColor : vec4<f32>
+) -> @location(0) vec4<f32> {
+    return fragColor;
 }
 </script>
 
