@@ -7,7 +7,7 @@ import { Shader } from 'src/platform/graphics/shader.js';
 import { Texture } from 'src/platform/graphics/texture.js';
 import { RenderTarget } from 'src/platform/graphics/render-target.js';
 import {
-    DEVICETYPE_WEBGL, DEVICETYPE_WEBGPU,
+    DEVICETYPE_WEBGPU,
     SEMANTIC_TEXCOORD0, SEMANTIC_POSITION, CULLFACE_NONE,
     PIXELFORMAT_RGBA8, FILTER_LINEAR, ADDRESS_CLAMP_TO_EDGE
 } from 'src/platform/graphics/constants.js';
@@ -141,8 +141,9 @@ function main() {
 
     const canvas = document.querySelector('#gpuCanvas');
     const gfxOptions = {
-        deviceTypes: [DEVICETYPE_WEBGPU, DEVICETYPE_WEBGL],
-        glslangUrl: 'https://rawcdn.githack.com/playcanvas/engine/b232b1380564018d477da156066f7abe39ca3630/examples/src/lib/glslang/glslang.js'
+        deviceTypes: [DEVICETYPE_WEBGPU],
+        glslangUrl: 'https://rawcdn.githack.com/playcanvas/engine/bd6256e83eadb065d4a5810959555200a9db4c9a/examples/src/lib/glslang/glslang.js',
+        twgslUrl: 'https://rawcdn.githack.com/playcanvas/engine/bd6256e83eadb065d4a5810959555200a9db4c9a/examples/src/lib/twgsl/twgsl.js'
     };
     createGraphicsDevice(canvas, gfxOptions).then((graphicsDevice) => {
 
