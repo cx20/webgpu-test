@@ -12,14 +12,14 @@ attribute position : vec3<f32>;
 
 @vertex
 fn main(input : VertexInputs) -> FragmentInputs {
-    gl_Position = vec4<f32>(position, 1.0);
+    vertexOutputs.position = vec4<f32>(vertexInputs.position, 1.0);
 }
 </script>
 
 <script id="fs" type="x-shader/x-fragment">
 @fragment
 fn main(input : FragmentInputs) -> FragmentOutputs {
-    gl_FragColor = vec4<f32>(0.0, 0.0, 1.0, 1.0);
+    fragmentOutputs.color = vec4<f32>(0.0, 0.0, 1.0, 1.0);
 }
 </script>
 

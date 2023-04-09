@@ -18,8 +18,8 @@ varying vColor : vec4<f32>;
 
 @vertex
 fn main(input : VertexInputs) -> FragmentInputs {
-    vColor = color;
-    gl_Position =  scene.viewProjection * mesh.world * vec4<f32>(position, 1.0);
+    vertexOutputs.vColor = input.color;
+    vertexOutputs.position =  scene.viewProjection * mesh.world * vec4<f32>(input.position, 1.0);
 }
 </script>
 
@@ -28,7 +28,7 @@ varying vColor : vec4<f32>;
 
 @fragment
 fn main(input : FragmentInputs) -> FragmentOutputs {
-    gl_FragColor = vColor;
+    fragmentOutputs.color = fragmentInputs.vColor;
 }
 </script>
 

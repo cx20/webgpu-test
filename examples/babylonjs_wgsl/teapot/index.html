@@ -21,10 +21,10 @@ varying vUV : vec2<f32>;
 
 @vertex
 fn main(input : VertexInputs) -> FragmentInputs {
-    gl_Position =  scene.viewProjection * mesh.world * vec4<f32>(position, 1.0);
-    vPosition = gl_Position.xyz;
-    vNormal = normal;
-    vUV = uv;
+    vertexOutputs.position =  scene.viewProjection * mesh.world * vec4<f32>(input.position, 1.0);
+    vertexOutputs.vPosition = vertexOutputs.position.xyz;
+    vertexOutputs.vNormal = input.normal;
+    vertexOutputs.vUV = input.uv;
 }
 </script>
 
@@ -40,11 +40,11 @@ var mySampler : sampler;
 
 @fragment
 fn main(input : FragmentInputs) -> FragmentOutputs {
-    var lightDirection: vec3<f32> = normalize(uniforms.uPointLightingLocation - vPosition.xyz);
-    var normal: vec3<f32> = normalize(vNormal);
+    var lightDirection: vec3<f32> = normalize(uniforms.uPointLightingLocation - fragmentInputs.vPosition.xyz);
+    var normal: vec3<f32> = normalize(fragmentInputs.vNormal);
     var lightWeighting: f32 = max(dot(normal, lightDirection), 0.0);
-    var fragmentColor: vec4<f32> = textureSample(diffuse, mySampler, vUV);
-    gl_FragColor = vec4<f32>(fragmentColor.rgb * lightWeighting, fragmentColor.a);
+    var fragmentColor: vec4<f32> = textureSample(diffuse, mySampler, fragmentInputs.vUV);
+    fragmentOutputs.color = vec4<f32>(fragmentColor.rgb * lightWeighting, fragmentColor.a);
 }
 </script>
 
