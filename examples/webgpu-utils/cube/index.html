@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>[WebGPU][WGLSL] Testing Cube Using webgpu-utils</title>
+  <link rel="stylesheet" type="text/css" href="style.css">
+  <meta http-equiv="origin-trial" content="AlwoJF9jpLJ1PEbLdDSbM9EL9SF0MvlkRNNdf/6iptGodRWO9KPvYIeIoGsCA/FJYjw59oaPagIzGobC9+bPJg8AAABheyJvcmlnaW4iOiJodHRwczovL2N4MjAuZ2l0aHViLmlvOjQ0MyIsImZlYXR1cmUiOiJXZWJHUFUiLCJleHBpcnkiOjE2OTE3MTE5OTksImlzU3ViZG9tYWluIjp0cnVlfQ==">
+</head>
+<body>
+
+<script type="importmap">
+{
+    "imports": {
+        "wgpu-matrix": "https://wgpu-matrix.org/dist/1.x/wgpu-matrix.module.js",
+        "webgpu-utils": "https://rawcdn.githack.com/greggman/webgpu-utils/56f102bd43a2e89e4c776bbd4c89b850a124f44a/dist/0.x/webgpu-utils.module.js"
+    }
+}
+</script>
+
+<script id="shader" type="x-shader/x-shader">
+struct VSUniforms {
+    worldViewProjection: mat4x4<f32>,
+    worldInverseTranspose: mat4x4<f32>,
+};
+@group(0) @binding(0) var<uniform> vsUniforms: VSUniforms;
+
+struct MyVSInput {
+    @location(0) position: vec4<f32>,
+    @location(1) color: vec4<f32>,
+};
+
+struct MyVSOutput {
+    @builtin(position) position: vec4<f32>,
+    @location(0) color: vec4<f32>,
+};
+
+@vertex
+fn myVSMain(v: MyVSInput) -> MyVSOutput {
+    var vsOut: MyVSOutput;
+    vsOut.position = vsUniforms.worldViewProjection * v.position;
+    vsOut.color = v.color;
+    return vsOut;
+}
+
+@fragment
+fn myFSMain(v: MyVSOutput) -> @location(0) vec4<f32> {
+    return v.color;
+}
+</script>
+
+<canvas id="c" width="465" height="465"></canvas>
+<script type="module" src="index.js"></script>
+</body>
+</html>
