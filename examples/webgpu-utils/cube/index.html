@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>[WebGPU][WGLSL] Testing Cube Using webgpu-utils</title>
+  <title>[WebGPU][WGSL] Testing Cube Using webgpu-utils</title>
   <link rel="stylesheet" type="text/css" href="style.css">
-  <meta http-equiv="origin-trial" content="AlwoJF9jpLJ1PEbLdDSbM9EL9SF0MvlkRNNdf/6iptGodRWO9KPvYIeIoGsCA/FJYjw59oaPagIzGobC9+bPJg8AAABheyJvcmlnaW4iOiJodHRwczovL2N4MjAuZ2l0aHViLmlvOjQ0MyIsImZlYXR1cmUiOiJXZWJHUFUiLCJleHBpcnkiOjE2OTE3MTE5OTksImlzU3ViZG9tYWluIjp0cnVlfQ==">
+  <meta http-equiv="origin-trial" content="AlwoJF9jpLJ1PEbLdDSbM9EL9SF0MvlkRNNdf/6iptGodRWO9KPvYIeIoGsCA/FJYjw59oaPagIzGobC9+bPJg8AAABheyJvcmlnaW4iOiJodHRwczovL2N4MjAuZ2l0aHViLmlvOjQ0IsImZlYXR1cmUiOiJXZWJHUFUiLCJleHBpcnkiOjE2OTE3MTE5OTksImlzU3ViZG9tYWluIjp0cnVlfQ==">
 </head>
 <body>
 
@@ -23,26 +23,26 @@ struct VSUniforms {
 };
 @group(0) @binding(0) var<uniform> vsUniforms: VSUniforms;
 
-struct MyVSInput {
+struct VSInput {
     @location(0) position: vec4<f32>,
     @location(1) color: vec4<f32>,
 };
 
-struct MyVSOutput {
+struct VSOutput {
     @builtin(position) position: vec4<f32>,
     @location(0) color: vec4<f32>,
 };
 
 @vertex
-fn myVSMain(v: MyVSInput) -> MyVSOutput {
-    var vsOut: MyVSOutput;
+fn vs_main(v: VSInput) -> VSOutput {
+    var vsOut: VSOutput;
     vsOut.position = vsUniforms.worldViewProjection * v.position;
     vsOut.color = v.color;
     return vsOut;
 }
 
 @fragment
-fn myFSMain(v: MyVSOutput) -> @location(0) vec4<f32> {
+fn fs_main(v: VSOutput) -> @location(0) vec4<f32> {
     return v.color;
 }
 </script>

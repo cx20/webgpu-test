@@ -1,14 +1,14 @@
 // forked from https://github.com/greggman/webgpu-utils/blob/main/examples/cube.js
-import { mat4, vec3 } from 'wgpu-matrix';
-import { makeShaderDataDefinitions, makeStructuredView} from 'webgpu-utils';
+import { mat4, vec3 } from "wgpu-matrix";
+import { makeShaderDataDefinitions, makeStructuredView} from "webgpu-utils";
 
 async function main() {
     const gpu = navigator.gpu;
     const adapter = await gpu.requestAdapter();
     const device = await adapter.requestDevice();
 
-    const canvas = document.querySelector('canvas');
-    const context = canvas.getContext('webgpu');
+    const canvas = document.querySelector("canvas");
+    const context = canvas.getContext("webgpu");
 
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
@@ -115,7 +115,7 @@ async function main() {
     const indicesBuffer  = createBuffer(device, new Uint16Array(indices),         GPUBufferUsage.INDEX);
   
     async function createShaderModule(device, code) {
-        device.pushErrorScope('validation');
+        device.pushErrorScope("validation");
         const shader = device.createShaderModule({
             code
         });
@@ -129,10 +129,10 @@ async function main() {
     const shaderModule = await createShaderModule(device, shaderSrc);
 
     const pipeline = device.createRenderPipeline({
-        layout: 'auto',
+        layout: "auto",
         vertex: {
             module: shaderModule,
-            entryPoint: 'myVSMain',
+            entryPoint: "vs_main",
             buffers: [
                 // position
                 {
@@ -140,34 +140,34 @@ async function main() {
                     attributes: [{
                         shaderLocation: 0,
                         offset: 0,
-                        format: 'float32x3'
+                        format: "float32x3"
                     }, ],
                 },
                 // color
                 {
-                    arrayStride: 4 * 4, // 3 floats, 4 bytes each
+                    arrayStride: 4 * 4, // 4 floats, 4 bytes each
                     attributes: [{
                         shaderLocation: 1,
                         offset: 0,
-                        format: 'float32x4'
+                        format: "float32x4"
                     }, ],
                 },
             ],
         },
         fragment: {
             module: shaderModule,
-            entryPoint: 'myFSMain',
+            entryPoint: "fs_main",
             targets: [{
                 format: presentationFormat
             }, ],
         },
         primitive: {
-            topology: 'triangle-list',
+            topology: "triangle-list",
         },
         depthStencil: {
             depthWriteEnabled: true,
-            depthCompare: 'less',
-            format: 'depth24plus',
+            depthCompare: "less",
+            format: "depth24plus",
         },
     });
 
@@ -194,14 +194,14 @@ async function main() {
             // view: undefined, // Assigned later
             // resolveTarget: undefined, // Assigned Later
             clearValue: [1.0, 1.0, 1.0, 1.0],
-            loadOp: 'clear',
-            storeOp: 'store',
+            loadOp: "clear",
+            storeOp: "store",
         }, ],
         depthStencilAttachment: {
             // view: undefined,  // Assigned later
             depthClearValue: 1,
-            depthLoadOp: 'clear',
-            depthStoreOp: 'store',
+            depthLoadOp: "clear",
+            depthStoreOp: "store",
         },
     };
 
@@ -243,7 +243,7 @@ async function main() {
 
             const newDepthTexture = device.createTexture({
                 size: [canvas.width, canvas.height],
-                format: 'depth24plus',
+                format: "depth24plus",
                 sampleCount,
                 usage: GPUTextureUsage.RENDER_ATTACHMENT,
             });
@@ -281,7 +281,7 @@ async function main() {
         passEncoder.setBindGroup(0, bindGroup);
         passEncoder.setVertexBuffer(0, positionBuffer);
         passEncoder.setVertexBuffer(1, colorBuffer);
-        passEncoder.setIndexBuffer(indicesBuffer, 'uint16');
+        passEncoder.setIndexBuffer(indicesBuffer, "uint16");
         passEncoder.drawIndexed(indices.length);
         passEncoder.end();
         device.queue.submit([commandEncoder.finish()]);
