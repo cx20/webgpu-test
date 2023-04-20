@@ -18,8 +18,9 @@ varying vUV : vec2<f32>;
 
 @vertex
 fn main(input : VertexInputs) -> FragmentInputs {
-    vUV = uv;
-    gl_Position =  scene.viewProjection * mesh.world * vec4<f32>(position, 1.0);
+    vertexOutputs.vUV = input.uv;
+    vertexOutputs.position = scene.viewProjection * mesh.world * vec4<f32>(input.position, 1.0);
+
 }
 </script>
 
@@ -31,7 +32,7 @@ var mySampler : sampler;
 
 @fragment
 fn main(input : FragmentInputs) -> FragmentOutputs {
-    gl_FragColor = textureSample(diffuse, mySampler, vUV);
+    fragmentOutputs.color = textureSample(diffuse, mySampler, input.vUV);
 }
 </script>
 
