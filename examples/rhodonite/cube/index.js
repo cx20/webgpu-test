@@ -104,10 +104,20 @@ import Rn from 'rhodonite';
     const promises = [];
     promises.push(Rn.ModuleManager.getInstance().loadModule('webgpu'));
     Promise.all(promises).then(async () => {
-        const gl = await Rn.System.init({
+        await Rn.System.init({
             approach: Rn.ProcessApproach.WebGPU,
             canvas: document.getElementById('world'),
         });
+
+        resizeCanvas();
+        
+        window.addEventListener("resize", function(){
+            resizeCanvas();
+        });
+
+        function resizeCanvas() {
+            Rn.System.resizeCanvas(window.innerWidth, window.innerHeight);
+        }
 
         const primitive = await readyBasicVerticesData();
     
@@ -130,7 +140,7 @@ import Rn from 'rhodonite';
         cameraComponent.zNear = 0.1;
         cameraComponent.zFar = 1000;
         cameraComponent.setFovyAndChangeFocalLength(45);
-        //cameraComponent.aspect = window.innerWidth / window.innerHeight;
+        cameraComponent.aspect = window.innerWidth / window.innerHeight;
      
         // renderPass
         const renderPass = new Rn.RenderPass();
@@ -138,14 +148,12 @@ import Rn from 'rhodonite';
         renderPass.toClearColorBuffer = true;
         renderPass.addEntities(entities);
 
-
         // expression
         const expression = new Rn.Expression();
         expression.addRenderPasses([renderPass]);
 
         const startTime = Date.now();
         const draw = function(time) {
-            //Rn.System.processAuto();
             const date = new Date();
 
             const rotation = 0.001 * (date.getTime() - startTime);
@@ -153,7 +161,6 @@ import Rn from 'rhodonite';
                 entity.getTransform().localEulerAngles = Rn.Vector3.fromCopyArray([0, rotation, rotation]);
             });
 
-            //gl.disable(gl.CULL_FACE); // TODO:
             Rn.System.process([expression]);
 
             count++;

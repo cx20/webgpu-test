@@ -51,10 +51,20 @@ import Rn from 'rhodonite';
     const promises = [];
     promises.push(Rn.ModuleManager.getInstance().loadModule('webgpu'));
     Promise.all(promises).then(async () => {
-        const gl = await Rn.System.init({
+        await Rn.System.init({
             approach: Rn.ProcessApproach.WebGPU,
             canvas: document.getElementById('world'),
         });
+
+        resizeCanvas();
+        
+        window.addEventListener("resize", function(){
+            resizeCanvas();
+        });
+
+        function resizeCanvas() {
+            Rn.System.resizeCanvas(window.innerWidth, window.innerHeight);
+        }
 
         const primitive = await readyBasicVerticesData();
     
