@@ -1,51 +1,5 @@
 import * as THREE from 'three';
-import WebGPURenderer from 'three/addons/renderers/webgpu/WebGPURenderer.js';
-import * as Nodes from 'three/nodes';
-
-// NOTE: The shader currently used in the WebGPU Renderer's MeshBasicMaterial is the following code.
-//       Please note that you cannot specify the color because you are using a texture.
-
-// https://github.com/mrdoob/three.js/blob/dev/examples/jsm/renderers/webgpu/WebGPURenderPipelines.js#L781-L802
-// #version 450
-// 
-// layout(location = 0) in vec3 position;
-// layout(location = 1) in vec2 uv;
-// 
-// layout(location = 0) out vec2 vUv;
-// 
-// layout(set = 0, binding = 0) uniform ModelUniforms {
-//     mat4 modelMatrix;
-//     mat4 modelViewMatrix;
-//     mat3 normalMatrix;
-// } modelUniforms;
-// 
-// layout(set = 0, binding = 1) uniform CameraUniforms {
-//     mat4 projectionMatrix;
-//     mat4 viewMatrix;
-// } cameraUniforms;
-// 
-// void main(){
-//     vUv = uv;
-//     gl_Position = cameraUniforms.projectionMatrix * modelUniforms.modelViewMatrix * vec4( position, 1.0 );
-// }
-// 
-
-// https://github.com/mrdoob/three.js/blob/dev/examples/jsm/renderers/webgpu/WebGPURenderPipelines.js#L803-L817
-// #version 450
-// layout(set = 0, binding = 2) uniform OpacityUniforms {
-//     float opacity;
-// } opacityUniforms;
-// 
-// layout(set = 0, binding = 3) uniform sampler mySampler;
-// layout(set = 0, binding = 4) uniform texture2D myTexture;
-// 
-// layout(location = 0) in vec2 vUv;
-// layout(location = 0) out vec4 outColor;
-// 
-// void main() {
-//     outColor = texture( sampler2D( myTexture, mySampler ), vUv );
-//     outColor.a *= opacityUniforms.opacity;
-// }
+import { color, uv, attribute } from 'three/tsl';
 
 let camera, scene, renderer, mesh;
 
@@ -157,12 +111,12 @@ async function init() {
 
     const loader = new THREE.TextureLoader();
     loader.load('../../../assets/textures/frog.jpg', texture => {
-        const material = new THREE.MeshBasicMaterial({map: texture, side: THREE.DoubleSide});
+        const material = new THREE.MeshBasicNodeMaterial({map: texture, side: THREE.DoubleSide});
         mesh = new THREE.Mesh(geometry, material);
         scene.add(mesh);
     });
 
-    renderer = new WebGPURenderer();
+    renderer = new THREE.WebGPURenderer();
     renderer.setClearColor(0xffffff);
     renderer.setSize( window.innerWidth, window.innerHeight );
     document.body.appendChild( renderer.domElement );
