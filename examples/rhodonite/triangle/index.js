@@ -18,7 +18,7 @@ import Rn from 'rhodonite';
 
         const flatMaterial = Rn.MaterialHelper.createFlatMaterial();
         const primitive = Rn.Primitive.createPrimitive({
-            material: flatMaterial, // TODO: void 0
+            material: void 0,
             attributeSemantics: [Rn.VertexAttribute.Position.XYZ, Rn.VertexAttribute.Color0.XYZ],
             indices,
             attributes: [positions, colors],
