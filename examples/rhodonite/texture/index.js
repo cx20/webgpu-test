@@ -161,13 +161,13 @@ const load = async function () {
     const rotationVec3 = Rn.MutableVector3.zero();
     let count = 0
 
-    const firstEntity = Rn.EntityHelper.createMeshEntity();
+    const firstEntity = Rn.createMeshEntity();
     const meshComponent = firstEntity.getMesh();
     meshComponent.setMesh(originalMesh);
     entities.push(firstEntity);
 
     // camera
-    const cameraEntity = Rn.EntityHelper.createCameraControllerEntity();
+    const cameraEntity = Rn.createCameraControllerEntity();
     cameraEntity.localPosition = Rn.Vector3.fromCopyArray([0, 0, 3]);
     const cameraComponent = cameraEntity.getCamera();
     cameraComponent.zNear = 0.1;

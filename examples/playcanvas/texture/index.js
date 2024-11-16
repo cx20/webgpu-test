@@ -1,138 +1,87 @@
 import * as pc from 'playcanvas';
 
-const assets = {
-    'frog': new pc.Asset('frog.jpg', 'texture', { url: 'https://cx20.github.io/webgpu-test/assets/textures/frog.jpg' }),
+const canvas = document.getElementById('gpuCanvas');
+
+/*
+const gfxOptions = {
+    deviceTypes: ['webgpu']
+};
+*/
+const gfxOptions = {
+    deviceTypes: [pc.DEVICETYPE_WEBGPU],
+    // TODO: Investigate how to reference external libraries.
+    glslangUrl: 'https://raw.githubusercontent.com/playcanvas/engine/bd6256e83eadb065d4a5810959555200a9db4c9a/examples/src/lib/glslang/glslang.js',
+    twgslUrl: 'https://raw.githubusercontent.com/playcanvas/engine/bd6256e83eadb065d4a5810959555200a9db4c9a/examples/src/lib/twgsl/twgsl.js'
 };
 
-const vertexShaderGLSL = /* glsl */`
-attribute vec4 vertex_position;
-attribute vec2 vertex_texCoord0;
+pc.createGraphicsDevice(canvas, gfxOptions).then((device) => {
+    device.maxPixelRatio = Math.min(window.devicePixelRatio, 2);
 
-varying vec2 uv;
+    const createOptions = new pc.AppOptions();
+    createOptions.graphicsDevice = device;
 
-uniform mat4 matrix_viewProjection;
-uniform mat4 matrix_model;
+    createOptions.componentSystems = [
+        pc.RenderComponentSystem,
+        pc.CameraComponentSystem,
+        pc.LightComponentSystem
+    ];
 
-void main() {
-    vec4 worldPos = matrix_model * vertex_position;
-    gl_Position = matrix_viewProjection * worldPos;
-    uv = vertex_texCoord0;
-}
-`;
+    createOptions.resourceHandlers = [
+        pc.TextureHandler,
+        pc.ContainerHandler
+    ];
 
-const fragmentShaderGLSL = /* glsl */`
-precision highp float;
-varying vec2 uv;
+    const app = new pc.AppBase(canvas);
+    app.init(createOptions);
 
-uniform sampler2D texture_emissiveMap;
+    function getTexture() {
+        const texture = new pc.Texture(device, { width: 256, height: 256 });
+        
+        const img = new Image();
+        img.onload = function () {
+            texture.minFilter = pc.FILTER_LINEAR;
+            texture.magFilter = pc.FILTER_LINEAR;
+            texture.addressU = pc.ADDRESS_CLAMP_TO_EDGE;
+            texture.addressV = pc.ADDRESS_CLAMP_TO_EDGE;
+            texture.setSource(img);
+        };
+        img.src = "../../../assets/textures/frog.jpg";  // 256x256
+        return texture;
+    };
+    
+    const material = new pc.StandardMaterial();
+    material.diffuseMap = getTexture();
+    material.update();
 
-void main() {
-    vec4 tex = texture2D(texture_emissiveMap, uv);
-    gl_FragColor = vec4(tex);
-}
-`;
+    app.setCanvasFillMode(pc.FILLMODE_FILL_WINDOW);
+    app.setCanvasResolution(pc.RESOLUTION_AUTO);
 
-function createPrimitive(app, primitiveType, shader, position, scale) {
+    const resize = () => app.resizeCanvas();
+    window.addEventListener('resize', resize);
+    app.on('destroy', () => {
+        window.removeEventListener('resize', resize);
+    });
 
-    const material = new pc.Material();
-    material.shader = shader;
-    material.setParameter('texture_emissiveMap', assets.frog.resource);
-
-    // create primitive
-    const primitive = new pc.Entity(primitiveType);
-    primitive.addComponent('render', {
-        type: primitiveType,
+    const box = new pc.Entity('cube');
+    box.addComponent('render', {
+        type: 'box',
         material: material
     });
+    app.root.addChild(box);
 
-    // set position and scale and add it to scene
-    primitive.setLocalPosition(position);
-    primitive.setLocalScale(scale);
-    app.root.addChild(primitive);
-
-    return primitive;
-}
-
-function onLoaded(app) {
-
-    app.start();
-
-    // Create the shader definition and shader from the vertex and fragment shaders
-    const shaderDefinition = {
-        attributes: {
-            vertex_position: pc.SEMANTIC_POSITION,
-            vertex_texCoord0: pc.SEMANTIC_TEXCOORD0
-        },
-        vshader: vertexShaderGLSL,
-        fshader: fragmentShaderGLSL
-    };
-    const shader = new pc.Shader(app.graphicsDevice, shaderDefinition);
-
-    const entities = [];
-    entities.push(createPrimitive(app, "box", shader, pc.Vec3.ZERO, new pc.Vec3(3, 3, 3)));
-
-    // Create an entity with a camera component
-    const camera = new pc.Entity();
-    camera.addComponent("camera", {
-        clearColor: new pc.Color(1, 1, 1, 1)
+    const camera = new pc.Entity('camera');
+    camera.addComponent('camera', {
+        clearColor: new pc.Color(0.5, 0.6, 0.9)
     });
     app.root.addChild(camera);
-    camera.setLocalPosition(0, 0, 10);
+    camera.setPosition(0, 0, 3);
 
-    let time = 0;
-    const rot = new pc.Quat();
-    app.on("update", function (dt) {
-        time += dt;
+    const light = new pc.Entity('light');
+    light.addComponent('light');
+    app.root.addChild(light);
+    light.setEulerAngles(45, 0, 0);
 
-        rot.setFromEulerAngles(50 * time, 50 * time, 50 * time);
-        entities[0].setRotation(rot);
-    });
+    app.on('update', (dt) => box.rotate(10 * dt, 20 * dt, 30 * dt));
 
-}
-
-function main() {
-
-    console.log("example start");
-
-    pc.Tracing.set(pc.TRACEID_SHADER_ALLOC, true);
-
-    const canvas = document.querySelector('#gpuCanvas');
-    const gfxOptions = {
-        deviceTypes: [pc.DEVICETYPE_WEBGPU],
-        // TODO: Investigate how to reference external libraries.
-        glslangUrl: 'https://raw.githubusercontent.com/playcanvas/engine/bd6256e83eadb065d4a5810959555200a9db4c9a/examples/src/lib/glslang/glslang.js',
-        twgslUrl: 'https://raw.githubusercontent.com/playcanvas/engine/bd6256e83eadb065d4a5810959555200a9db4c9a/examples/src/lib/twgsl/twgsl.js'
-    };
-    pc.createGraphicsDevice(canvas, gfxOptions).then((graphicsDevice) => {
-
-        console.log("Graphics Device created: ", graphicsDevice);
-
-        const createOptions = new pc.AppOptions();
-        createOptions.graphicsDevice = graphicsDevice;
-
-        createOptions.componentSystems = [
-            pc.RenderComponentSystem,
-            pc.CameraComponentSystem,
-            pc.LightComponentSystem,
-        ];
-        createOptions.resourceHandlers = [
-            pc.TextureHandler,
-            pc.ContainerHandler
-        ];
-
-        const app = new pc.AppBase(canvas);
-        app.init(createOptions);
-
-        const lighting = app.scene.lighting;
-        lighting.shadowsEnabled = false;
-        lighting.cookiesEnabled = false;
-
-        const assetListLoader = new pc.AssetListLoader(Object.values(assets), app.assets);
-        assetListLoader.load(() => {
-            onLoaded(app);
-        });
-
-    }).catch(console.error);
-}
-
-window.addEventListener('load', main);
+    app.start();
+});
