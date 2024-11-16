@@ -65,7 +65,7 @@ const load = async function () {
     let count = 0
 
     // camera
-    const cameraEntity = Rn.EntityHelper.createCameraControllerEntity();
+    const cameraEntity = Rn.createCameraControllerEntity();
     cameraEntity.localPosition = Rn.Vector3.fromCopyArray([0, 0, 8]);
     const cameraComponent = cameraEntity.getCamera();
     cameraComponent.zNear = 0.1;

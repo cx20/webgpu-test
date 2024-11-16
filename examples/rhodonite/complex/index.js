@@ -53,7 +53,7 @@ const load = async function () {
 
   
   // camera
-  const cameraEntity = Rn.EntityHelper.createCameraControllerEntity();
+  const cameraEntity = Rn.createCameraControllerEntity();
   const cameraComponent = cameraEntity.getCamera();
   cameraComponent.zNear = 0.1;
   cameraComponent.zFar = 1000;
@@ -62,7 +62,7 @@ const load = async function () {
   const cameraControllerComponent = cameraEntity.getCameraController();
 
   // Lights
-  const lightEntity1 = Rn.EntityHelper.createLightEntity();
+  const lightEntity1 = Rn.createLightEntity();
   const lightComponent1 = lightEntity1.getLight();
   lightComponent1.type = Rn.LightType.Directional;
   lightEntity1.getTransform().localPosition = Rn.Vector3.fromCopyArray([1.0, 1.0, 100000.0]);
@@ -99,7 +99,7 @@ const load = async function () {
 
       if (modelInfo.name == "Rex") {
         cameraControllerComponent.controller.setTarget(rootGroup);
-        const cameraEntity = Rn.EntityHelper.createCameraEntity();
+        const cameraEntity = Rn.createCameraEntity();
         const cameraComponent = cameraEntity.getCamera();
         cameraComponent.zNear = 0.1;
         cameraComponent.zFar = 1000.0;

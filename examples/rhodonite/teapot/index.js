@@ -90,7 +90,7 @@ const load = async function () {
         const entities = [];
         const originalMesh = new Rn.Mesh();
         originalMesh.addPrimitive(primitive);
-        const entity = Rn.EntityHelper.createMeshEntity();
+        const entity = Rn.createMeshEntity();
 
         entities.push(entity);
         const meshComponent = entity.getComponent(Rn.MeshComponent);
@@ -102,7 +102,7 @@ const load = async function () {
         const rotationVec3 = Rn.MutableVector3.zero();
 
         // camera
-        const cameraEntity = Rn.EntityHelper.createCameraControllerEntity();
+        const cameraEntity = Rn.createCameraControllerEntity();
         cameraEntity.localPosition = Rn.Vector3.fromCopyArray([0, 0, 35]);
         const cameraComponent = cameraEntity.getCamera();
         cameraComponent.zNear = 0.1;
@@ -112,7 +112,7 @@ const load = async function () {
 
         // TODO: Light is not applied correctly
         // Lights
-        const lightEntity = Rn.EntityHelper.createLightEntity();
+        const lightEntity = Rn.createLightEntity();
         const lightComponent = lightEntity.getLight();
         lightComponent.type = Rn.LightType.Point;
         lightComponent.intensity = Rn.Vector3.fromCopyArray([1, 1, 1]);

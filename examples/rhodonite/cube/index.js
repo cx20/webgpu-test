@@ -126,7 +126,7 @@ import Rn from 'rhodonite';
         const originalMesh = new Rn.Mesh();
         originalMesh.addPrimitive(primitive);
         
-        const firstEntity = Rn.EntityHelper.createMeshEntity();
+        const firstEntity = Rn.createMeshEntity();
         const meshComponent = firstEntity.getMesh();
         meshComponent.setMesh(originalMesh);
         const entities = [];
@@ -134,7 +134,7 @@ import Rn from 'rhodonite';
 
         let count = 0
         // camera
-        const cameraEntity = Rn.EntityHelper.createCameraControllerEntity();
+        const cameraEntity = Rn.createCameraControllerEntity();
         cameraEntity.localPosition = Rn.Vector3.fromCopyArray([0, 0, 3]);
         const cameraComponent = cameraEntity.getCamera();
         cameraComponent.zNear = 0.1;
