@@ -108,13 +108,40 @@ const load = async function () {
       rootGroups.push(rootGroup);
     }
 
-    draw();
+    const renderPass = new Rn.RenderPass();
 
+    renderPass.addEntities(rootGroups);
+    renderPass.toClearColorBuffer = true;
+    renderPass.toClearDepthBuffer = true;
+    renderPass.clearColor = Rn.Vector4.fromCopyArray4([0.2, 0.2, 0.2, 1]);
+
+    // gamma correction
+	const gammaTargetFramebuffer = Rn.RenderableHelper.createFrameBuffer({
+		width: 1024,
+		height: 1024,
+		textureNum: 1,
+		textureFormats: [Rn.TextureFormat.RGBA8],
+		createDepthBuffer: true,
+	  });
+	renderPass.setFramebuffer(gammaTargetFramebuffer);
+
+    const gammaCorrectionMaterial = Rn.MaterialHelper.createGammaCorrectionMaterial();
+    const gammaRenderPass =
+    Rn.RenderPassHelper.createScreenDrawRenderPassWithBaseColorTexture(
+    	gammaCorrectionMaterial,
+    	gammaTargetFramebuffer.getColorAttachedRenderTargetTexture(0)
+    );
+
+    const expression = new Rn.Expression();
+    expression.addRenderPasses([renderPass, gammaRenderPass]);
+    expressions.push(expression);
+
+    draw();
   });
   
   let startTime = Date.now();
   const draw = function () {
-    Rn.System.processAuto();
+
     const date = new Date();
     const rotation = 0.001 * (date.getTime() - startTime);
     const angle = 0.02 * date.getTime();
@@ -126,6 +153,7 @@ const load = async function () {
     
     cameraControllerComponent.controller.rotX = -angle;
     
+    Rn.System.process(expressions);
     requestAnimationFrame(draw);
   };
 }
