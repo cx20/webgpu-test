@@ -120,7 +120,7 @@ WGPUShaderModule createShader(const uint32_t* code, uint32_t size, const char* l
 WGPUShaderModule createShader(const char* const code, const char* label = nullptr) {
 	WGPUShaderModuleWGSLDescriptor wgsl = {};
 	wgsl.chain.sType = WGPUSType_ShaderModuleWGSLDescriptor;
-	wgsl.source = code;
+	wgsl.code = code;
 	WGPUShaderModuleDescriptor desc = {};
 	desc.nextInChain = reinterpret_cast<WGPUChainedStruct*>(&wgsl);
 	desc.label = label;
@@ -140,6 +140,7 @@ void createPipelineAndBuffers() {
 	WGPUShaderModule vertMod = createShader(triangle_vert_wgsl);
 	WGPUShaderModule fragMod = createShader(triangle_frag_wgsl);
 
+	// Simple pipeline layout without bind group layouts
 	WGPUPipelineLayoutDescriptor layoutDesc = {};
 	WGPUPipelineLayout pipelineLayout = wgpuDeviceCreatePipelineLayout(device, &layoutDesc);
 
@@ -199,7 +200,6 @@ void createPipelineAndBuffers() {
 	pipeline = wgpuDeviceCreateRenderPipeline(device, &desc);
 
 	wgpuPipelineLayoutRelease(pipelineLayout);
-
 	wgpuShaderModuleRelease(fragMod);
 	wgpuShaderModuleRelease(vertMod);
 
@@ -222,6 +222,7 @@ bool redraw() {
 
 	WGPURenderPassColorAttachment colorDesc = {};
 	colorDesc.view    = backBufView;
+	colorDesc.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
 	colorDesc.loadOp  = WGPULoadOp_Clear;
 	colorDesc.storeOp = WGPUStoreOp_Store;
 	colorDesc.clearValue.r = 1.0f;
@@ -236,7 +237,7 @@ bool redraw() {
 	WGPUCommandEncoder encoder = wgpuDeviceCreateCommandEncoder(device, nullptr);			// create encoder
 	WGPURenderPassEncoder pass = wgpuCommandEncoderBeginRenderPass(encoder, &renderPass);	// create pass
 
-	// draw the triangle
+	// draw the triangle (comment these five lines to simply clear the screen)
 	wgpuRenderPassEncoderSetPipeline(pass, pipeline);
 	wgpuRenderPassEncoderSetVertexBuffer(pass, 0, vertBuf, 0, WGPU_WHOLE_SIZE);
 	wgpuRenderPassEncoderSetIndexBuffer(pass, indxBuf, WGPUIndexFormat_Uint16, 0, WGPU_WHOLE_SIZE);
@@ -249,7 +250,6 @@ bool redraw() {
 
 	wgpuQueueSubmit(queue, 1, &commands);
 	wgpuCommandBufferRelease(commands);														// release commands
-
 	wgpuTextureViewRelease(backBufView);													// release textureView
 
 	return true;

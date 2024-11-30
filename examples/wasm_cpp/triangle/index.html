@@ -1,12 +1,1 @@
-<!doctype html>
-<html>
-<head>
-<meta charset=utf-8>
-<title>Hello, World!</title>
-<link href=style.css rel=stylesheet>
-</head>
-<body>
-<canvas height=480 id=c width=640></canvas>
-<script>let c=document.getElementById("c");c.width=window.innerWidth,c.height=window.innerHeight;var Module={};function binary(e){return new Promise(((n,t)=>{var r=new XMLHttpRequest;r.open("GET",e,!0),r.responseType="arraybuffer",r.onload=()=>{n(r.response)},r.send(null)}))}function script(e){return new Promise(((n,t)=>{var r=document.createElement("script");r.src=e,r.onload=()=>{n()},document.body.appendChild(r)}))}Promise.all([binary("index.js"),binary("index.wasm")]).then((e=>{Module.wasm=e[1];var n=URL.createObjectURL(new Blob([e[0]],{type:"application/javascript"}));script(n).then((()=>{URL.revokeObjectURL(n)}))}))</script>
-</body>
-</html>
+<!doctypehtml><html><head><meta charset=utf-8><title>Hello, World!</title><link href=style.css rel=stylesheet></head><body><canvas height=480 id=c width=640></canvas><script>let c=document.getElementById("c");c.width=window.innerWidth,c.height=window.innerHeight;var Module={},binary=e=>fetch(e).then((e=>e.arrayBuffer()));function script(e){return new Promise(((n,t)=>{var i=document.createElement("script");i.src=e,i.onload=()=>{n()},document.body.appendChild(i)}))}Promise.all([binary("index.js"),binary("index.wasm")]).then((e=>{Module.wasm=e[1];var n=URL.createObjectURL(new Blob([e[0]],{type:"application/javascript"}));script(n).then((()=>URL.revokeObjectURL(n)))}))</script></body></html>

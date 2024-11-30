@@ -123,7 +123,7 @@ WGPUShaderModule createShader(const uint32_t* code, uint32_t size, const char* l
 WGPUShaderModule createShader(const char* const code, const char* label = nullptr) {
 	WGPUShaderModuleWGSLDescriptor wgsl = {};
 	wgsl.chain.sType = WGPUSType_ShaderModuleWGSLDescriptor;
-	wgsl.source = code;
+	wgsl.code = code;
 	WGPUShaderModuleDescriptor desc = {};
 	desc.nextInChain = reinterpret_cast<WGPUChainedStruct*>(&wgsl);
 	desc.label = label;
@@ -237,6 +237,7 @@ bool redraw() {
 
 	WGPURenderPassColorAttachment colorDesc = {};
 	colorDesc.view    = backBufView;
+	colorDesc.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
 	colorDesc.loadOp  = WGPULoadOp_Clear;
 	colorDesc.storeOp = WGPUStoreOp_Store;
 	colorDesc.clearValue.r = 1.0f;
