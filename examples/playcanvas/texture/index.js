@@ -2,16 +2,11 @@ import * as pc from 'playcanvas';
 
 const canvas = document.getElementById('gpuCanvas');
 
-/*
 const gfxOptions = {
-    deviceTypes: ['webgpu']
-};
-*/
-const gfxOptions = {
-    deviceTypes: [pc.DEVICETYPE_WEBGPU],
+    deviceTypes: ['webgpu'],
     // TODO: Investigate how to reference external libraries.
-    glslangUrl: 'https://raw.githubusercontent.com/playcanvas/engine/bd6256e83eadb065d4a5810959555200a9db4c9a/examples/src/lib/glslang/glslang.js',
-    twgslUrl: 'https://raw.githubusercontent.com/playcanvas/engine/bd6256e83eadb065d4a5810959555200a9db4c9a/examples/src/lib/twgsl/twgsl.js'
+    glslangUrl: 'https://unpkg.com/@webgpu/glslang@0.0.15/dist/web-devel/glslang.js',
+    twgslUrl: 'https://cx20.github.io/webgpu-test/libs/twgsl.js'
 };
 
 pc.createGraphicsDevice(canvas, gfxOptions).then((device) => {
