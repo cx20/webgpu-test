@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>[WIP][WebGPU] Testing Complex sample Using PlayCanvas</title>
+  <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+<body>
+<!-- Since import maps are not yet supported by all browsers, its is
+    necessary to add the polyfill es-module-shims.js -->
+<script async src="https://unpkg.com/es-module-shims@1.7.3/dist/es-module-shims.js"></script>
+
+<script type="importmap">
+    {
+        "imports": {
+            "playcanvas": "https://cx20.github.io/gltf-test/libs/playcanvas/v2.5.0/playcanvas-stable.min.mjs",
+            "camera-controls": "https://cx20.github.io/gltf-test/libs/playcanvas/v2.5.0/camera-controls.mjs",
+            "dat.gui": "https://cx20.github.io/gltf-test/libs/common/dat.gui.module.js"
+        }
+    }
+</script>
+
+<canvas id="application"></canvas>
+<script type="module" src="index.js"></script>
+</body>
+</html>
