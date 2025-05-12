@@ -115,7 +115,7 @@ const load = async function () {
         const lightEntity = Rn.createLightEntity();
         const lightComponent = lightEntity.getLight();
         lightComponent.type = Rn.LightType.Point;
-        lightComponent.intensity = Rn.Vector3.fromCopyArray([1, 1, 1]);
+        lightComponent.intensity = 1;
         lightEntity.localPosition = Rn.Vector3.fromCopyArray([100, 0, 100]);
 
         // renderPass
