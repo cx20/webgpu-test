@@ -1,6 +1,6 @@
 import Rn from 'rhodonite';
 
-function readyTeapotVerticesData(data) {
+async function readyTeapotVerticesData(data) {
 
     const positions = new Float32Array(data.vertexPositions);
     const normals   = new Float32Array(data.vertexNormals);
@@ -8,9 +8,10 @@ function readyTeapotVerticesData(data) {
     const indices   = new Uint32Array(data.indices);
     
     const material = Rn.MaterialHelper.createClassicUberMaterial();
-    const texture = new Rn.Texture();
+	const assets = await Rn.defaultAssetLoader.load({
     // copy from: https://github.com/gpjt/webgl-lessons/blob/master/lesson14/arroway.de_metal%2Bstructure%2B06_d100_flat.jpg
-    texture.generateTextureFromUri('../../../assets/textures/arroway.de_metal+structure+06_d100_flat.jpg');
+		texture: Rn.Texture.loadFromUrl('../../../assets/textures/arroway.de_metal+structure+06_d100_flat.jpg')
+	});
 
     const sampler = new Rn.Sampler({
       magFilter: Rn.TextureParameter.Linear,
@@ -20,7 +21,7 @@ function readyTeapotVerticesData(data) {
     });
     sampler.create();
 
-    material.setTextureParameter('diffuseColorTexture', texture, sampler);
+    material.setTextureParameter('diffuseColorTexture', assets.texture, sampler);
 
     const primitive = Rn.Primitive.createPrimitive({
         indices: indices,
@@ -76,14 +77,14 @@ const load = async function () {
 
     });
     
-    function init(data) {
+    async function init(data) {
         resizeCanvas();
         
         window.addEventListener("resize", function(){
             resizeCanvas();
         });
         
-        const primitive = readyTeapotVerticesData(data);
+        const primitive = await readyTeapotVerticesData(data);
 
         Rn.MeshRendererComponent.manualTransparentSids = [];
 

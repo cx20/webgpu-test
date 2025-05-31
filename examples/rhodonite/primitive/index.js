@@ -23,8 +23,9 @@ const load = async function () {
         Rn.System.resizeCanvas(window.innerWidth, window.innerHeight);
     }
 
-    const texture = new Rn.Texture();
-    texture.generateTextureFromUri('../../../assets/textures/earth.jpg');
+	const assets = await Rn.defaultAssetLoader.load({
+		texture: Rn.Texture.loadFromUrl('../../../assets/textures/earth.jpg')
+	});
 
     const sampler = new Rn.Sampler({
       magFilter: Rn.TextureParameter.Linear,
@@ -35,7 +36,7 @@ const load = async function () {
     sampler.create();
 
     const material = Rn.MaterialHelper.createClassicUberMaterial();
-    material.setTextureParameter('diffuseColorTexture', texture, sampler);
+    material.setTextureParameter('diffuseColorTexture', assets.texture, sampler);
     
     const entities = [];
 
