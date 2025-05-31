@@ -1,4 +1,52 @@
-import RedGPU from "https://redcamel.github.io/RedGPU/src/RedGPU.js";
+import * as RedGPU from "https://redcamel.github.io/RedGPU/dist/index.js";
+
+// 1. Create and append a canvas
+// 캔버스 생성 및 추가
+const canvas = document.createElement('canvas');
+document.body.appendChild(canvas);
+
+// 2. Initialize RedGPU
+RedGPU.init(
+	canvas,
+	(redGPUContext) => {
+		// Create a camera controller (Orbit type)
+		const controller = new RedGPU.Camera.ObitController(redGPUContext);
+
+		// Create a scene and view, then add the view to the context
+		const scene = new RedGPU.Display.Scene();
+		const view = new RedGPU.Display.View3D(redGPUContext, scene, controller);
+		// Enable the display of the axis helper in the view
+		view.axis = true;
+		// Enable the display of the grid helper in the view
+		view.grid = true;
+		redGPUContext.addView(view);
+
+		// Create a renderer and start rendering
+		const renderer = new RedGPU.Renderer(redGPUContext);
+		const render = (time) => {
+			// Logic for every frame goes here
+		};
+		renderer.start(redGPUContext, render);
+
+		//renderTestPane(redGPUContext)
+
+	},
+	(failReason) => {
+		// Show the error if initialization fails
+		console.error('초기화 실패:', failReason);
+
+		// Create an element for the error message
+		const errorMessage = document.createElement('div');
+		errorMessage.innerHTML = failReason;
+
+		// Append the error message to the document body
+		document.body.appendChild(errorMessage);
+	}
+);
+
+	
+/*
+import * as RedGPU from "https://redcamel.github.io/RedGPU/dist/index.js";
 
 const c = document.getElementById('canvas');
 
@@ -101,3 +149,5 @@ new RedGPU.RedGPUContext(c,
 
     }
 )
+*/
+
