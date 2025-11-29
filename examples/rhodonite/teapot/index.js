@@ -48,9 +48,6 @@ let vertexTextureCoords;
 let indices;
 
 const load = async function () {
-    Rn.Config.dataTextureWidth  = 2 ** 9; // default: 2 ** 11;
-    Rn.Config.dataTextureHeight = 2 ** 9; // default: 2 ** 11;
-
     const c = document.getElementById('world');
 
     await Rn.System.init({

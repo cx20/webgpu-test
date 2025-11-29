@@ -26,15 +26,6 @@ c.width = window.innerWidth;
 c.height = window.innerHeight;
 
 const load = async function () {
-  Rn.Config.maxSkeletalBoneNumber = 500;
-  Rn.Config.maxSkeletonNumber = 100;
-  Rn.Config.maxEntityNumber = 11000;
-  Rn.Config.maxCameraNumber = 20;
-  Rn.Config.maxSkeletalBoneNumberForUniformMode = 200;
-  Rn.Config.maxMaterialInstanceForEachType = 400;
-  Rn.Config.dataTextureWidth = 2 ** 13;
-  Rn.Config.dataTextureHeight = 2 ** 13;
-
   await Rn.ModuleManager.getInstance().loadModule('webgpu');
   await Rn.ModuleManager.getInstance().loadModule('pbr');
   const c = document.getElementById('world');
