@@ -26,24 +26,19 @@ c.width = window.innerWidth;
 c.height = window.innerHeight;
 
 const load = async function () {
-  await Rn.ModuleManager.getInstance().loadModule('webgpu');
-  await Rn.ModuleManager.getInstance().loadModule('pbr');
-  const c = document.getElementById('world');
-
-  await Rn.System.init({
+  const engine = await Rn.Engine.init({
     approach: Rn.ProcessApproach.WebGPU,
     canvas: c,
   });
 
   function resizeCanvas() {
-      Rn.System.resizeCanvas(window.innerWidth, window.innerHeight);
+      engine.resizeCanvas(window.innerWidth, window.innerHeight);
   }
   
   resizeCanvas();
   window.addEventListener("resize", resizeCanvas);
-  
-  // camera
-  const cameraEntity = Rn.createCameraControllerEntity();
+
+  const cameraEntity = Rn.createCameraControllerEntity(engine);
   const cameraComponent = cameraEntity.getCamera();
   cameraComponent.zNear = 0.1;
   cameraComponent.zFar = 1000;
@@ -51,8 +46,7 @@ const load = async function () {
   cameraComponent.aspect = window.innerWidth / window.innerHeight;
   const cameraControllerComponent = cameraEntity.getCameraController();
 
-  // Lights
-  const lightEntity1 = Rn.createLightEntity();
+  const lightEntity1 = Rn.createLightEntity(engine);
   const lightComponent1 = lightEntity1.getLight();
   lightComponent1.type = Rn.LightType.Directional;
   lightEntity1.getTransform().localPosition = Rn.Vector3.fromCopyArray([1.0, 1.0, 100000.0]);
@@ -60,121 +54,84 @@ const load = async function () {
   lightEntity1.getComponent(Rn.LightComponent).type = Rn.LightType.Directional;
   lightEntity1.getTransform().localEulerAngles = Rn.Vector3.fromCopyArray([Math.PI / 2, Math.PI / 4, Math.PI / 4]);
 
-  const loadedAssets = [];
-  
+  const allRenderPasses = [];
+  let targetEntities = null;
+
   for (let i = 0; i < modelInfoSet.length; i++) {
+    const modelInfo = modelInfoSet[i];
     try {
-      const modelInfo = modelInfoSet[i];
-      
-      const assets = await Rn.defaultAssetLoader.load({
-        gltf: await Rn.GltfImporter.importFromUrl(
-          modelInfo.url,
-          {
-            defaultMaterialHelperArgumentArray: [
-              {
-                makeOutputSrgb: false,
-              },
-            ],
-          }
-        )
-      });
-      
-      loadedAssets.push({
-        assets: assets,
-        modelInfo: modelInfo
-      });
-      
+
+      const expression = await Rn.GltfImporter.importFromUrl(
+        engine,
+        modelInfo.url,
+        {
+          cameraComponent: cameraComponent,
+          defaultMaterialHelperArgumentArray: [
+            {
+              makeOutputSrgb: true,
+            },
+          ],
+        }
+      );
+
+      const mainRenderPass = expression.renderPasses[0];
+      const entities = mainRenderPass.entities;
+
+      for (let entity of entities) {
+        const sceneGraph = entity.getSceneGraph();
+        if (!sceneGraph.parent) {
+          const transform = entity.getTransform();
+          transform.localScale = Rn.Vector3.fromCopyArray([modelInfo.scale, modelInfo.scale, modelInfo.scale]);
+          transform.localEulerAngles = Rn.Vector3.fromCopyArray([modelInfo.rotation[0], modelInfo.rotation[1], modelInfo.rotation[2]]);
+          transform.localPosition = Rn.Vector3.fromCopyArray([modelInfo.position[0], modelInfo.position[1], modelInfo.position[2]]);
+        }
+      }
+
+      if (modelInfo.name === "Fox") {
+        targetEntities = entities;
+      }
+
+      allRenderPasses.push(mainRenderPass);
+
     } catch (error) {
       console.error(`Failed to load model ${modelInfo.name}:`, error);
     }
   }
-  
-  if (loadedAssets.length === 0) {
+
+  if (allRenderPasses.length === 0) {
     console.error('No models were successfully loaded');
     return;
   }
 
-  const allEntities = [];
-  
-  for (let i = 0; i < loadedAssets.length; i++) {
-    const { assets, modelInfo } = loadedAssets[i];
-    
-    const mainRenderPass = assets.gltf.renderPasses[0];
-    const entities = mainRenderPass.entities;
-    
-    let rootEntity = null;
-    for (let entity of entities) {
-      const transform = entity.getTransform();
-      if (!transform.parent || transform.parent === Rn.TransformComponent.dummyTransformComponent) {
-        rootEntity = entity;
-        break;
-      }
+  for (let i = 0; i < allRenderPasses.length; i++) {
+    const renderPass = allRenderPasses[i];
+    if (i === 0) {
+      renderPass.toClearColorBuffer = true;
+      renderPass.toClearDepthBuffer = true;
+      renderPass.clearColor = Rn.Vector4.fromCopyArray4([0.2, 0.2, 0.2, 1]);
+    } else {
+      renderPass.toClearColorBuffer = false;
+      renderPass.toClearDepthBuffer = false;
     }
-    
-    if (!rootEntity && entities.length > 0) {
-      rootEntity = entities[0];
-    }
-    
-    if (rootEntity) {
-      const transform = rootEntity.getTransform();
-      const currentScale = transform.localScale;
-      const currentRotation = transform.localEulerAngles;
-      const currentPosition = transform.localPosition;
-      
-      transform.localScale 
-	  	= Rn.Vector3.fromCopyArray([modelInfo.scale, modelInfo.scale, modelInfo.scale]);
-      transform.localEulerAngles 
-	  	= Rn.Vector3.fromCopyArray([modelInfo.rotation[0], modelInfo.rotation[1], modelInfo.rotation[2]]);
-      transform.localPosition 
-	  	= Rn.Vector3.fromCopyArray([modelInfo.position[0], modelInfo.position[1], modelInfo.position[2]]);
-	}
-    
-    if (modelInfo.name === "Rex") {
-      cameraControllerComponent.controller.setTargets(entities);
-    }
-    
-    allEntities.push(...entities);
   }
 
-  const renderPass = new Rn.RenderPass();
-  renderPass.addEntities(allEntities);
-  renderPass.toClearColorBuffer = true;
-  renderPass.toClearDepthBuffer = true;
-  renderPass.clearColor = Rn.Vector4.fromCopyArray4([0.2, 0.2, 0.2, 1]);
+  const expression = new Rn.Expression(engine);
+  expression.addRenderPasses(allRenderPasses);
 
-  const gammaTargetFramebuffer = Rn.RenderableHelper.createFrameBuffer({
-    width: 1024,
-    height: 1024,
-    textureNum: 1,
-    textureFormats: [Rn.TextureFormat.RGBA8],
-    createDepthBuffer: true,
-  });
-  renderPass.setFramebuffer(gammaTargetFramebuffer);
-
-  const gammaCorrectionMaterial = Rn.MaterialHelper.createGammaCorrectionMaterial();
-  const gammaRenderPass =
-  Rn.RenderPassHelper.createScreenDrawRenderPassWithBaseColorTexture(
-    gammaCorrectionMaterial,
-    gammaTargetFramebuffer.getColorAttachedRenderTargetTexture(0)
-  );
-
-  const expression = new Rn.Expression();
-  expression.addRenderPasses([renderPass, gammaRenderPass]);
-  const expressions = [expression];
+  if (targetEntities) {
+    cameraControllerComponent.controller.setTargets(targetEntities);
+  }
 
   let startTime = Date.now();
   const draw = function () {
     const date = new Date();
-    const angle = 0.02 * date.getTime();
     const time = (date.getTime() - startTime) / 1000;
-    Rn.AnimationComponent.globalTime = time;
-    if (time > Rn.AnimationComponent.endInputValue) {
+    Rn.AnimationComponent.setGlobalTime(engine, time);
+    if (time > Rn.AnimationComponent.getEndInputValue(engine)) {
       startTime = date.getTime();
     }
-    
-    cameraControllerComponent.controller.rotX = -angle;
-    
-    Rn.System.process(expressions);
+
+    engine.process([expression]);
     requestAnimationFrame(draw);
   };
   
