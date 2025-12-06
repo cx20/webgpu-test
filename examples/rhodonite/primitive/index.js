@@ -1,10 +1,9 @@
 import Rn from 'rhodonite';
 
 const load = async function () {
-    await Rn.ModuleManager.getInstance().loadModule('webgpu');
     const c = document.getElementById('world');
 
-    await Rn.System.init({
+    const engine = await Rn.Engine.init({
       approach: Rn.ProcessApproach.WebGPU,
       canvas: c,
     });
@@ -16,14 +15,14 @@ const load = async function () {
     });
 
     function resizeCanvas() {
-        Rn.System.resizeCanvas(window.innerWidth, window.innerHeight);
+        engine.resizeCanvas(window.innerWidth, window.innerHeight);
     }
 
 	const assets = await Rn.defaultAssetLoader.load({
-		texture: Rn.Texture.loadFromUrl('../../../assets/textures/earth.jpg')
+		texture: Rn.Texture.loadFromUrl(engine, '../../../assets/textures/earth.jpg')
 	});
 
-    const sampler = new Rn.Sampler({
+    const sampler = new Rn.Sampler(engine, {
       magFilter: Rn.TextureParameter.Linear,
       minFilter: Rn.TextureParameter.Linear,
       wrapS: Rn.TextureParameter.ClampToEdge,
@@ -31,17 +30,17 @@ const load = async function () {
     });
     sampler.create();
 
-    const material = Rn.MaterialHelper.createClassicUberMaterial();
+    const material = Rn.MaterialHelper.createClassicUberMaterial(engine);
     material.setTextureParameter('diffuseColorTexture', assets.texture, sampler);
     
     const entities = [];
 
-    const entity1 = Rn.MeshHelper.createPlane({material: material});
-    const entity2 = Rn.MeshHelper.createSphere({material: material});
-    const entity3 = Rn.MeshHelper.createCube({material: material});
-    const entity4 = Rn.MeshHelper.createGrid();
-    const entity5 = Rn.MeshHelper.createAxis();
-    const entity6 = Rn.MeshHelper.createJoint();
+    const entity1 = Rn.MeshHelper.createPlane(engine, {material: material});
+    const entity2 = Rn.MeshHelper.createSphere(engine, {material: material});
+    const entity3 = Rn.MeshHelper.createCube(engine, {material: material});
+    const entity4 = Rn.MeshHelper.createGrid(engine);
+    const entity5 = Rn.MeshHelper.createAxis(engine);
+    const entity6 = Rn.MeshHelper.createJoint(engine);
 
     entity1.localPosition = Rn.Vector3.fromCopyArray([-3.0,  1.5, 0]);
     entity2.localPosition = Rn.Vector3.fromCopyArray([ 0.0,  1.5, 0]);
@@ -62,7 +61,7 @@ const load = async function () {
     let count = 0
 
     // camera
-    const cameraEntity = Rn.createCameraControllerEntity();
+    const cameraEntity = Rn.createCameraControllerEntity(engine);
     cameraEntity.localPosition = Rn.Vector3.fromCopyArray([0, 0, 8]);
     const cameraComponent = cameraEntity.getCamera();
     cameraComponent.zNear = 0.1;
@@ -71,14 +70,14 @@ const load = async function () {
     cameraComponent.aspect = window.innerWidth / window.innerHeight;
 
     // renderPass
-    const renderPass = new Rn.RenderPass();
+    const renderPass = new Rn.RenderPass(engine);
     renderPass.cameraComponent = cameraComponent;
     renderPass.toClearColorBuffer = true;
     renderPass.clearColor = Rn.Vector4.fromCopyArray4([0, 0, 0, 1]);
     renderPass.addEntities(entities);
 
     // expression
-    const expression = new Rn.Expression();
+    const expression = new Rn.Expression(engine);
     expression.addRenderPasses([renderPass]);
 
     let axis = Rn.Vector3.fromCopyArray([1, 1, 1]);
@@ -96,7 +95,7 @@ const load = async function () {
         entity5.localEulerAngles = Rn.Vector3.fromCopyArray([0, rotation, 0]);
         entity6.localEulerAngles = Rn.Vector3.fromCopyArray([0, rotation, 0]);
 
-        Rn.System.process([expression]);
+        engine.process([expression]);
 
         count++;
         requestAnimationFrame(draw);

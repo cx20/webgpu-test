@@ -1,19 +1,19 @@
 import Rn from 'rhodonite';
 
-async function readyTeapotVerticesData(data) {
+async function readyTeapotVerticesData(engine, data) {
 
     const positions = new Float32Array(data.vertexPositions);
     const normals   = new Float32Array(data.vertexNormals);
     const texcoords = new Float32Array(data.vertexTextureCoords);
     const indices   = new Uint32Array(data.indices);
     
-    const material = Rn.MaterialHelper.createClassicUberMaterial();
+    const material = Rn.MaterialHelper.createClassicUberMaterial(engine);
 	const assets = await Rn.defaultAssetLoader.load({
-    // copy from: https://github.com/gpjt/webgl-lessons/blob/master/lesson14/arroway.de_metal%2Bstructure%2B06_d100_flat.jpg
-		texture: Rn.Texture.loadFromUrl('../../../assets/textures/arroway.de_metal+structure+06_d100_flat.jpg')
+	    // copy from: https://github.com/gpjt/webgl-lessons/blob/master/lesson14/arroway.de_metal%2Bstructure%2B06_d100_flat.jpg
+		texture: Rn.Texture.loadFromUrl(engine, '../../../assets/textures/arroway.de_metal+structure+06_d100_flat.jpg')
 	});
 
-    const sampler = new Rn.Sampler({
+    const sampler = new Rn.Sampler(engine, {
       magFilter: Rn.TextureParameter.Linear,
       minFilter: Rn.TextureParameter.Linear,
       wrapS: Rn.TextureParameter.Repeat,
@@ -23,7 +23,7 @@ async function readyTeapotVerticesData(data) {
 
     material.setTextureParameter('diffuseColorTexture', assets.texture, sampler);
 
-    const primitive = Rn.Primitive.createPrimitive({
+    const primitive = Rn.Primitive.createPrimitive(engine, {
         indices: indices,
         attributeSemantics: [Rn.VertexAttribute.Position.XYZ, Rn.VertexAttribute.Normal.XYZ, Rn.VertexAttribute.Texcoord0.XY],
         attributes: [positions, normals, texcoords],
@@ -50,7 +50,7 @@ let indices;
 const load = async function () {
     const c = document.getElementById('world');
 
-    await Rn.System.init({
+    const engine = await Rn.Engine.init({
       approach: Rn.ProcessApproach.WebGPU,
       canvas: c,
     });
@@ -62,16 +62,12 @@ const load = async function () {
     });
 
     function resizeCanvas() {
-        Rn.System.resizeCanvas(window.innerWidth, window.innerHeight);
+        engine.resizeCanvas(window.innerWidth, window.innerHeight);
     }
     
-    const promise = Rn.ModuleManager.getInstance().loadModule('webgpu');
-    Promise.all([promise]).then(function() {
-        // copy from: https://github.com/gpjt/webgl-lessons/blob/master/lesson14/Teapot.json
-        $.getJSON("../../../assets/json/teapot.json", function (data) {
-            init(data);
-        });
-
+    // copy from: https://github.com/gpjt/webgl-lessons/blob/master/lesson14/Teapot.json
+    $.getJSON("../../../assets/json/teapot.json", function (data) {
+        init(data);
     });
     
     async function init(data) {
@@ -81,14 +77,14 @@ const load = async function () {
             resizeCanvas();
         });
         
-        const primitive = await readyTeapotVerticesData(data);
+        const primitive = await readyTeapotVerticesData(engine, data);
 
         Rn.MeshRendererComponent.manualTransparentSids = [];
 
         const entities = [];
-        const originalMesh = new Rn.Mesh();
+        const originalMesh = new Rn.Mesh(engine);
         originalMesh.addPrimitive(primitive);
-        const entity = Rn.createMeshEntity();
+        const entity = Rn.createMeshEntity(engine);
 
         entities.push(entity);
         const meshComponent = entity.getComponent(Rn.MeshComponent);
@@ -100,7 +96,7 @@ const load = async function () {
         const rotationVec3 = Rn.MutableVector3.zero();
 
         // camera
-        const cameraEntity = Rn.createCameraControllerEntity();
+        const cameraEntity = Rn.createCameraControllerEntity(engine);
         cameraEntity.localPosition = Rn.Vector3.fromCopyArray([0, 0, 35]);
         const cameraComponent = cameraEntity.getCamera();
         cameraComponent.zNear = 0.1;
@@ -110,14 +106,14 @@ const load = async function () {
 
         // TODO: Light is not applied correctly
         // Lights
-        const lightEntity = Rn.createLightEntity();
+        const lightEntity = Rn.createLightEntity(engine);
         const lightComponent = lightEntity.getLight();
         lightComponent.type = Rn.LightType.Point;
         lightComponent.intensity = 1;
         lightEntity.localPosition = Rn.Vector3.fromCopyArray([100, 0, 100]);
 
         // renderPass
-        const renderPass = new Rn.RenderPass();
+        const renderPass = new Rn.RenderPass(engine);
         renderPass.cameraComponent = cameraComponent;
         renderPass.toClearColorBuffer = true;
         renderPass.toClearDepthBuffer = true;
@@ -125,7 +121,7 @@ const load = async function () {
         renderPass.addEntities(entities);
 
         // expression
-        const expression = new Rn.Expression();
+        const expression = new Rn.Expression(engine);
         expression.addRenderPasses([renderPass]);
 
         const draw = function(time) {
@@ -137,7 +133,7 @@ const load = async function () {
                 entity.getTransform().localEulerAngles = Rn.Vector3.fromCopyArray([0, rotation, 0]);
             });
 
-            Rn.System.process([expression]);
+            engine.process([expression]);
 
             requestAnimationFrame(draw);
         }

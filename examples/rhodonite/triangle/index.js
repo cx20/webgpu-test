@@ -1,67 +1,69 @@
 import Rn from 'rhodonite';
 
-(function() {
-    async function readyBasicVerticesData() {
-        const positions = new Float32Array([
-           -0.5, -0.5, 0.0,
-            0.5, -0.5, 0.0,
-            0.0,  0.5, 0.0
-        ]);
-        const colors = new Float32Array([
-            0.0, 0.0, 1.0,
-            0.0, 0.0, 1.0,
-            0.0, 0.0, 1.0,
-        ]);
-        const indices = new Uint32Array([
-            0, 1, 2
-        ]);
+function readyBasicVerticesData(engine) {
 
-        const flatMaterial = Rn.MaterialHelper.createFlatMaterial();
-        const primitive = Rn.Primitive.createPrimitive({
-            material: void 0,
-            attributeSemantics: [Rn.VertexAttribute.Position.XYZ, Rn.VertexAttribute.Color0.XYZ],
-            indices,
-            attributes: [positions, colors],
-            primitiveMode: Rn.PrimitiveMode.Triangles,
-        });
+    const positions = new Float32Array([
+         0.0,  0.5, 0.0, // v0
+        -0.5, -0.5, 0.0, // v1
+         0.5, -0.5, 0.0  // v2
+    ]);
 
-        return primitive;
+    const colors = new Float32Array([
+        0.0, 0.0, 1.0,
+        0.0, 0.0, 1.0,
+        0.0, 0.0, 1.0,
+    ]);
+
+    const indices = new Uint32Array([
+        0, 1, 2
+    ]);
+
+    const primitive = Rn.Primitive.createPrimitive(engine, {
+        indices: indices,
+        attributeSemantics: [Rn.VertexAttribute.Position.XYZ, Rn.VertexAttribute.Color0.XYZ],
+        attributes: [positions, colors],
+        material: void 0,
+        primitiveMode: Rn.PrimitiveMode.Triangles
+    });
+
+    return primitive;
+}
+
+const load = async function () {
+    const c = document.getElementById('world');
+
+    const engine = await Rn.Engine.init({
+      approach: Rn.ProcessApproach.WebGPU,
+      canvas: c,
+    });
+
+    resizeCanvas();
+    
+    window.addEventListener("resize", function(){
+        resizeCanvas();
+    });
+
+    function resizeCanvas() {
+        engine.resizeCanvas(window.innerWidth, window.innerHeight);
+    }
+    
+    const primitive = readyBasicVerticesData(engine);
+
+    Rn.MeshRendererComponent.manualTransparentSids = [];
+
+    const originalMesh = new Rn.Mesh(engine);
+    originalMesh.addPrimitive(primitive);
+    
+    const firstEntity = Rn.createMeshEntity(engine);
+    const meshComponent = firstEntity.getMesh();
+    meshComponent.setMesh(originalMesh);
+
+    const draw = function(time) {
+        engine.processAuto();
+        requestAnimationFrame(draw);
     }
 
-    const promises = [];
-    promises.push(Rn.ModuleManager.getInstance().loadModule('webgpu'));
-    Promise.all(promises).then(async () => {
-        await Rn.System.init({
-            approach: Rn.ProcessApproach.WebGPU,
-            canvas: document.getElementById('world'),
-        });
+    draw();
+}
 
-        resizeCanvas();
-        
-        window.addEventListener("resize", function(){
-            resizeCanvas();
-        });
-
-        function resizeCanvas() {
-            Rn.System.resizeCanvas(window.innerWidth, window.innerHeight);
-        }
-    
-        const primitive = await readyBasicVerticesData();
-    
-        Rn.MeshRendererComponent.manualTransparentSids = [];
-    
-        const originalMesh = new Rn.Mesh();
-        originalMesh.addPrimitive(primitive);
-        
-        const firstEntity = Rn.createMeshEntity();
-        const meshComponent = firstEntity.getMesh();
-        meshComponent.setMesh(originalMesh);
-        
-        const draw = function(time) {
-            Rn.System.processAuto();
-            requestAnimationFrame(draw);
-        }
-    
-        draw();
-    });
-})();
+document.body.onload = load;

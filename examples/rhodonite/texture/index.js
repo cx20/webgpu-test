@@ -1,6 +1,6 @@
 import Rn from 'rhodonite';
 
-async function readyBasicVerticesData(texture) {
+async function readyBasicVerticesData(engine, texture) {
 
     // Cube data
     //             1.0 y 
@@ -100,7 +100,7 @@ async function readyBasicVerticesData(texture) {
         20, 21, 22,   20, 22, 23   // Left face
     ]);
         
-    const primitive = Rn.Primitive.createPrimitive({
+    const primitive = Rn.Primitive.createPrimitive(engine, {
         indices: indices,
         attributeSemantics: [Rn.VertexAttribute.Position.XYZ, Rn.VertexAttribute.Texcoord0.XY],
         attributes: [positions, texcoords],
@@ -108,7 +108,7 @@ async function readyBasicVerticesData(texture) {
         primitiveMode: Rn.PrimitiveMode.Triangles
     });
 
-    const sampler = new Rn.Sampler({
+    const sampler = new Rn.Sampler(engine, {
       magFilter: Rn.TextureParameter.Linear,
       minFilter: Rn.TextureParameter.Linear,
       wrapS: Rn.TextureParameter.ClampToEdge,
@@ -123,16 +123,15 @@ async function readyBasicVerticesData(texture) {
 }
 
 const load = async function () {
-    await Rn.ModuleManager.getInstance().loadModule('webgpu');
     const c = document.getElementById('world');
 
-    await Rn.System.init({
+    const engine = await Rn.Engine.init({
       approach: Rn.ProcessApproach.WebGPU,
       canvas: c,
     });
 
     const assets = await Rn.defaultAssetLoader.load({
-    	texture: Rn.Texture.loadFromUrl('../../../assets/textures/frog.jpg')
+    	texture: Rn.Texture.loadFromUrl(engine, '../../../assets/textures/frog.jpg')
     });
 
     resizeCanvas();
@@ -142,15 +141,15 @@ const load = async function () {
     });
 
     function resizeCanvas() {
-        Rn.System.resizeCanvas(window.innerWidth, window.innerHeight);
+        engine.resizeCanvas(window.innerWidth, window.innerHeight);
     }
     
-    const primitive = await readyBasicVerticesData(assets.texture);
+    const primitive = await readyBasicVerticesData(engine, assets.texture);
 
     Rn.MeshRendererComponent.manualTransparentSids = [];
 
     const entities = [];
-    const originalMesh = new Rn.Mesh();
+    const originalMesh = new Rn.Mesh(engine);
     originalMesh.addPrimitive(primitive);
 
     const startTime = Date.now();
@@ -158,13 +157,13 @@ const load = async function () {
     const rotationVec3 = Rn.MutableVector3.zero();
     let count = 0
 
-    const firstEntity = Rn.createMeshEntity();
+    const firstEntity = Rn.createMeshEntity(engine);
     const meshComponent = firstEntity.getMesh();
     meshComponent.setMesh(originalMesh);
     entities.push(firstEntity);
 
     // camera
-    const cameraEntity = Rn.createCameraControllerEntity();
+    const cameraEntity = Rn.createCameraControllerEntity(engine);
     cameraEntity.localPosition = Rn.Vector3.fromCopyArray([0, 0, 3]);
     const cameraComponent = cameraEntity.getCamera();
     cameraComponent.zNear = 0.1;
@@ -173,13 +172,13 @@ const load = async function () {
     cameraComponent.aspect = window.innerWidth / window.innerHeight;
  
     // renderPass
-    const renderPass = new Rn.RenderPass();
+    const renderPass = new Rn.RenderPass(engine);
     renderPass.cameraComponent = cameraComponent;
     renderPass.toClearColorBuffer = true;
     renderPass.addEntities(entities);
 
     // expression
-    const expression = new Rn.Expression();
+    const expression = new Rn.Expression(engine);
     expression.addRenderPasses([renderPass]);
 
     const draw = function(time) {
@@ -191,7 +190,7 @@ const load = async function () {
         });
 
         //gl.disable(gl.CULL_FACE); // TODO:
-        Rn.System.process([expression]);
+        engine.process([expression]);
 
         count++;
         requestAnimationFrame(draw);
