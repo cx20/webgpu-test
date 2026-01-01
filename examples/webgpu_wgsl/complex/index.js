@@ -389,6 +389,7 @@ async function processMesh(device, gltf, buffers, baseUrl, meshIndex, defaultTex
             uniformBuffer,
             jointMatricesBuffer,
             bindGroup,
+            texture,  // Store texture for per-node bind group creation
             baseColor,
             hasTexture,
             hasSkinning,
@@ -692,7 +693,7 @@ async function main() {
                 worldMatrix: mat4.create(),
                 meshIndex: node.mesh,
                 skinIndex: node.skin !== undefined ? node.skin : null,
-                children: node.children || [],
+                children: node.children ? [...node.children] : [],
                 hasMatrix: !!node.matrix,
                 name: node.name || `Node_${index}`
             };
@@ -715,14 +716,64 @@ async function main() {
             }
         }
         
+        // Create per-node resources for mesh instances
+        // This fixes the issue where multiple nodes share the same mesh but need different transforms
+        for (const node of nodes) {
+            if (node.meshIndex !== undefined) {
+                const mesh = meshes[node.meshIndex];
+                node.primitiveInstances = [];
+                
+                for (const prim of mesh.primitives) {
+                    // Create uniform buffer for this node's instance
+                    const uniformBuffer = device.createBuffer({
+                        size: 304,
+                        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+                    });
+                    
+                    // Create joint matrices storage buffer
+                    const jointMatricesBuffer = device.createBuffer({
+                        size: MAX_JOINTS * 64,
+                        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
+                    });
+                    
+                    // Create bind group for this node's instance
+                    const bindGroup = device.createBindGroup({
+                        layout: mainPipeline.getBindGroupLayout(0),
+                        entries: [
+                            { binding: 0, resource: { buffer: uniformBuffer } },
+                            { binding: 1, resource: { buffer: jointMatricesBuffer } },
+                            { binding: 2, resource: sampler },
+                            { binding: 3, resource: prim.texture.createView() }
+                        ]
+                    });
+                    
+                    node.primitiveInstances.push({
+                        primitive: prim,
+                        uniformBuffer,
+                        jointMatricesBuffer,
+                        bindGroup
+                    });
+                }
+            }
+        }
+        
         const skins = loadSkins(gltf, buffers);
         const animations = loadAnimations(gltf, buffers);
         
         let currentAnimation = null;
-        if (animations.length > 0 && modelInfo.name !== 'CesiumMilkTruck') {
+        if (animations.length > 0) {
+            // Enable animation for all models including CesiumMilkTruck
             currentAnimation = modelInfo.name === 'Fox' 
                 ? (animations.find(a => a.name === 'Run') || animations[0])
                 : animations[0];
+        }
+        
+        // Debug: Log node hierarchy for CesiumMilkTruck
+        if (modelInfo.name === 'CesiumMilkTruck') {
+            console.log('CesiumMilkTruck node hierarchy:');
+            nodes.forEach((node, i) => {
+                console.log(`  Node ${i}: ${node.name}, meshIndex: ${node.meshIndex}, children: [${node.children.join(', ')}]`);
+            });
         }
         
         const scene = gltf.scenes[gltf.scene || 0];
@@ -797,6 +848,9 @@ async function main() {
     const normalMatrix = mat4.create();
     
     const startTime = performance.now() / 1000;
+    
+    // Debug flag - set to true to see node traversal on first frame
+    let debugFirstFrame = true;
     
     // Render loop
     function render() {
@@ -875,6 +929,11 @@ async function main() {
             const drawNode = (nodeIndex) => {
                 const node = model.nodes[nodeIndex];
                 
+                // Debug logging
+                if (debugFirstFrame && loadedModels.indexOf(model) === 0) {
+                    console.log(`  drawNode(${nodeIndex}): ${node.name}, meshIndex: ${node.meshIndex}, children: [${node.children.join(', ')}]`);
+                }
+                
                 if (node.meshIndex !== undefined) {
                     const nodeSkin = node.skinIndex !== null ? model.skins[node.skinIndex] : null;
                     const mesh = model.meshes[node.meshIndex];
@@ -885,8 +944,12 @@ async function main() {
                     mat4.invert(normalMatrix, modelMatrix);
                     mat4.transpose(normalMatrix, normalMatrix);
                     
-                    for (const prim of mesh.primitives) {
-                        // Update uniforms
+                    // Use per-node primitive instances to avoid shared uniform buffer issue
+                    for (let primIdx = 0; primIdx < mesh.primitives.length; primIdx++) {
+                        const prim = mesh.primitives[primIdx];
+                        const instance = node.primitiveInstances[primIdx];
+                        
+                        // Update uniforms using node-specific buffer
                         const uniforms = new ArrayBuffer(304);
                         const floatView = new Float32Array(uniforms);
                         const uintView = new Uint32Array(uniforms);
@@ -900,7 +963,7 @@ async function main() {
                         uintView[72] = prim.hasSkinning && nodeSkin ? 1 : 0; // hasSkinning
                         uintView[73] = prim.hasTexture ? 1 : 0; // hasTexture
                         
-                        device.queue.writeBuffer(prim.uniformBuffer, 0, uniforms);
+                        device.queue.writeBuffer(instance.uniformBuffer, 0, uniforms);
                         
                         // Update joint matrices
                         if (prim.hasSkinning && nodeSkin) {
@@ -909,10 +972,10 @@ async function main() {
                             for (let j = 0; j < numJoints; j++) {
                                 jointData.set(nodeSkin.jointMatrices[j], j * 16);
                             }
-                            device.queue.writeBuffer(prim.jointMatricesBuffer, 0, jointData);
+                            device.queue.writeBuffer(instance.jointMatricesBuffer, 0, jointData);
                         }
                         
-                        renderPass.setBindGroup(0, prim.bindGroup);
+                        renderPass.setBindGroup(0, instance.bindGroup);
                         renderPass.setVertexBuffer(0, prim.positionBuffer);
                         renderPass.setVertexBuffer(1, prim.normalBuffer);
                         renderPass.setVertexBuffer(2, prim.texCoordBuffer);
@@ -941,10 +1004,16 @@ async function main() {
         renderPass.end();
         device.queue.submit([commandEncoder.finish()]);
         
+        // Reset debug flag after first frame
+        if (debugFirstFrame) {
+            console.log('First frame complete - debug logging disabled');
+            debugFirstFrame = false;
+        }
+        
         requestAnimationFrame(render);
     }
     
     render();
 }
 
-main();
+main();66666666666
