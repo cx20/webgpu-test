@@ -474,23 +474,41 @@ function updateAnimation(animation, nodes, time) {
     
     animation.channels.forEach(channel => {
         const node = nodes[channel.targetNode];
+        if (!node) return; // Skip if node doesn't exist
+        
         const times = channel.input;
         const values = channel.output;
         
+        if (times.length === 0) return;
+        
+        // Find the two keyframes to interpolate between
         let prevIndex = 0;
         let nextIndex = 0;
         
-        for (let i = 0; i < times.length - 1; i++) {
-            if (t >= times[i] && t < times[i + 1]) {
-                prevIndex = i;
-                nextIndex = i + 1;
-                break;
+        // Handle edge cases
+        if (t <= times[0]) {
+            prevIndex = 0;
+            nextIndex = 0;
+        } else if (t >= times[times.length - 1]) {
+            prevIndex = times.length - 1;
+            nextIndex = times.length - 1;
+        } else {
+            for (let i = 0; i < times.length - 1; i++) {
+                if (t >= times[i] && t < times[i + 1]) {
+                    prevIndex = i;
+                    nextIndex = i + 1;
+                    break;
+                }
             }
         }
         
-        const startTime = times[prevIndex];
-        const endTime = times[nextIndex];
-        const factor = (t - startTime) / (endTime - startTime);
+        // Calculate interpolation factor
+        let factor = 0;
+        if (prevIndex !== nextIndex) {
+            const startTime = times[prevIndex];
+            const endTime = times[nextIndex];
+            factor = (t - startTime) / (endTime - startTime);
+        }
         
         if (channel.targetPath === 'rotation') {
             const prev = values.subarray(prevIndex * 4, prevIndex * 4 + 4);
@@ -506,6 +524,81 @@ function updateAnimation(animation, nodes, time) {
             vec3.lerp(node.scale, prev, next, factor);
         }
     });
+}
+
+// ========== Ground Tracks ==========
+
+function createGroundTrack(device, width, height, color) {
+    // Create quad geometry for ground track
+    const positions = new Float32Array([
+        -width / 2, 0,  0,
+         width / 2, 0,  0,
+         width / 2, 0,  height,
+        -width / 2, 0,  height
+    ]);
+    
+    const normals = new Float32Array([
+        0, 1, 0,
+        0, 1, 0,
+        0, 1, 0,
+        0, 1, 0
+    ]);
+    
+    const indices = new Uint32Array([0, 1, 2, 0, 2, 3]);
+    
+    const positionBuffer = device.createBuffer({
+        size: positions.byteLength,
+        usage: GPUBufferUsage.VERTEX,
+        mappedAtCreation: true
+    });
+    new Float32Array(positionBuffer.getMappedRange()).set(positions);
+    positionBuffer.unmap();
+    
+    const normalBuffer = device.createBuffer({
+        size: normals.byteLength,
+        usage: GPUBufferUsage.VERTEX,
+        mappedAtCreation: true
+    });
+    new Float32Array(normalBuffer.getMappedRange()).set(normals);
+    normalBuffer.unmap();
+    
+    const indexBuffer = device.createBuffer({
+        size: indices.byteLength,
+        usage: GPUBufferUsage.INDEX,
+        mappedAtCreation: true
+    });
+    new Uint32Array(indexBuffer.getMappedRange()).set(indices);
+    indexBuffer.unmap();
+    
+    const texCoordBuffer = device.createBuffer({
+        size: 32,
+        usage: GPUBufferUsage.VERTEX,
+        mappedAtCreation: true
+    });
+    new Float32Array(texCoordBuffer.getMappedRange()).set([0, 0, 1, 0, 1, 1, 0, 1]);
+    texCoordBuffer.unmap();
+    
+    const jointsBuffer = device.createBuffer({
+        size: 64,
+        usage: GPUBufferUsage.VERTEX,
+        mappedAtCreation: true
+    });
+    new Uint32Array(jointsBuffer.getMappedRange()).fill(0);
+    jointsBuffer.unmap();
+    
+    const weightsBuffer = device.createBuffer({
+        size: 64,
+        usage: GPUBufferUsage.VERTEX,
+        mappedAtCreation: true
+    });
+    new Float32Array(weightsBuffer.getMappedRange()).fill(0);
+    weightsBuffer.unmap();
+    
+    return {
+        positionBuffer, normalBuffer, texCoordBuffer, jointsBuffer, weightsBuffer,
+        indexBuffer, indexCount: indices.length,
+        color: color
+    };
 }
 
 // ========== Main ==========
@@ -774,6 +867,13 @@ async function main() {
             nodes.forEach((node, i) => {
                 console.log(`  Node ${i}: ${node.name}, meshIndex: ${node.meshIndex}, children: [${node.children.join(', ')}]`);
             });
+            console.log('CesiumMilkTruck animations:', animations.length);
+            if (currentAnimation) {
+                console.log('  Current animation:', currentAnimation.name, 'duration:', currentAnimation.duration);
+                currentAnimation.channels.forEach((ch, i) => {
+                    console.log(`    Channel ${i}: targetNode=${ch.targetNode}, path=${ch.targetPath}, keyframes=${ch.input.length}`);
+                });
+            }
         }
         
         const scene = gltf.scenes[gltf.scene || 0];
@@ -829,6 +929,41 @@ async function main() {
         console.log(`Loaded ${modelInfo.name}`);
     }
     
+    // Create ground tracks
+    const groundTracks = [
+        {
+            track: createGroundTrack(device, 100, 0.1, [255/255, 255/255, 255/255, 1.0]),
+            position: [-49.5, 0, -1.6]
+        },
+        {
+            track: createGroundTrack(device, 100, 0.1, [255/255, 255/255, 255/255, 1.0]),
+            position: [-49.5, 0, -2.35]
+        }
+    ];
+    
+    // Create uniform buffers for ground tracks
+    for (const ground of groundTracks) {
+        ground.uniformBuffer = device.createBuffer({
+            size: 304,
+            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+        });
+        
+        ground.jointMatricesBuffer = device.createBuffer({
+            size: MAX_JOINTS * 64,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
+        });
+        
+        ground.bindGroup = device.createBindGroup({
+            layout: mainPipeline.getBindGroupLayout(0),
+            entries: [
+                { binding: 0, resource: { buffer: ground.uniformBuffer } },
+                { binding: 1, resource: { buffer: ground.jointMatricesBuffer } },
+                { binding: 2, resource: sampler },
+                { binding: 3, resource: defaultTexture.createView() }
+            ]
+        });
+    }
+    
     // Calculate camera parameters
     const center = [
         (sceneBbox.min[0] + sceneBbox.max[0]) / 2,
@@ -849,12 +984,18 @@ async function main() {
     
     const startTime = performance.now() / 1000;
     
-    // Debug flag - set to true to see node traversal on first frame
-    let debugFirstFrame = true;
+    // Debug flag - count frames instead of just first frame
+    let debugFrameCount = 0;
+    const DEBUG_FRAME_LIMIT = 5;
     
     // Render loop
     function render() {
         const time = performance.now() / 1000 - startTime;
+        const debugThisFrame = debugFrameCount < DEBUG_FRAME_LIMIT;
+        
+        if (debugThisFrame) {
+            console.log(`Frame ${debugFrameCount}, time: ${time.toFixed(3)}`);
+        }
         
         const aspect = canvas.width / canvas.height;
         mat4.perspective(projectionMatrix, Math.PI / 4, aspect, cameraDistance * 0.01, cameraDistance * 10);
@@ -898,9 +1039,50 @@ async function main() {
         // Draw models
         renderPass.setPipeline(mainPipeline);
         
+        // Draw ground tracks
+        for (const ground of groundTracks) {
+            const modelMatrix = mat4.create();
+            mat4.translate(modelMatrix, modelMatrix, ground.position);
+            
+            mat4.invert(normalMatrix, modelMatrix);
+            mat4.transpose(normalMatrix, normalMatrix);
+            
+            const uniforms = new ArrayBuffer(304);
+            const floatView = new Float32Array(uniforms);
+            const uintView = new Uint32Array(uniforms);
+            
+            floatView.set(modelMatrix, 0);
+            floatView.set(viewMatrix, 16);
+            floatView.set(projectionMatrix, 32);
+            floatView.set(normalMatrix, 48);
+            floatView.set([1, 1, 1, 0], 64);
+            floatView.set(ground.track.color, 68);
+            uintView[72] = 0; // hasSkinning
+            uintView[73] = 0; // hasTexture
+            
+            device.queue.writeBuffer(ground.uniformBuffer, 0, uniforms);
+            
+            renderPass.setBindGroup(0, ground.bindGroup);
+            renderPass.setVertexBuffer(0, ground.track.positionBuffer);
+            renderPass.setVertexBuffer(1, ground.track.normalBuffer);
+            renderPass.setVertexBuffer(2, ground.track.texCoordBuffer);
+            renderPass.setVertexBuffer(3, ground.track.jointsBuffer);
+            renderPass.setVertexBuffer(4, ground.track.weightsBuffer);
+            renderPass.setIndexBuffer(ground.track.indexBuffer, 'uint32');
+            renderPass.drawIndexed(ground.track.indexCount);
+        }
+        
         for (const model of loadedModels) {
             if (model.currentAnimation) {
                 updateAnimation(model.currentAnimation, model.nodes, time);
+                
+                // Debug: Log rotation for first model's animated nodes on first few frames
+                if (debugThisFrame && loadedModels.indexOf(model) === 0) {
+                    model.currentAnimation.channels.forEach(ch => {
+                        const node = model.nodes[ch.targetNode];
+                        console.log(`  Animation update: Node ${ch.targetNode} (${node.name}) rotation: [${node.rotation[0].toFixed(3)}, ${node.rotation[1].toFixed(3)}, ${node.rotation[2].toFixed(3)}, ${node.rotation[3].toFixed(3)}]`);
+                    });
+                }
             }
             
             // Update hierarchy to compute world matrices
@@ -909,6 +1091,14 @@ async function main() {
                 // Only update matrix from TRS if node doesn't have original matrix or has been animated
                 if (!node.hasMatrix || model.currentAnimation) {
                     mat4.fromRotationTranslationScale(node.matrix, node.rotation, node.translation, node.scale);
+                    
+                    // Debug: Log matrix update for Wheels nodes
+                    if (debugThisFrame && model === loadedModels[0] && (node.name === 'Wheels' || node.name === 'Wheels.001')) {
+                        const rot = node.rotation;
+                        const mat = node.matrix;
+                        console.log(`  Matrix update: ${node.name}, rotation=[${rot[0].toFixed(3)}, ${rot[1].toFixed(3)}, ${rot[2].toFixed(3)}, ${rot[3].toFixed(3)}]`);
+                        console.log(`    Matrix[0-3]=[${mat[0].toFixed(3)}, ${mat[1].toFixed(3)}, ${mat[2].toFixed(3)}, ${mat[3].toFixed(3)}]`);
+                    }
                 }
                 mat4.multiply(node.worldMatrix, parentMatrix, node.matrix);
                 for (const childId of node.children) {
@@ -928,11 +1118,6 @@ async function main() {
             // Draw meshes
             const drawNode = (nodeIndex) => {
                 const node = model.nodes[nodeIndex];
-                
-                // Debug logging
-                if (debugFirstFrame && loadedModels.indexOf(model) === 0) {
-                    console.log(`  drawNode(${nodeIndex}): ${node.name}, meshIndex: ${node.meshIndex}, children: [${node.children.join(', ')}]`);
-                }
                 
                 if (node.meshIndex !== undefined) {
                     const nodeSkin = node.skinIndex !== null ? model.skins[node.skinIndex] : null;
@@ -1004,10 +1189,12 @@ async function main() {
         renderPass.end();
         device.queue.submit([commandEncoder.finish()]);
         
-        // Reset debug flag after first frame
-        if (debugFirstFrame) {
-            console.log('First frame complete - debug logging disabled');
-            debugFirstFrame = false;
+        // Increment debug frame counter
+        if (debugThisFrame) {
+            debugFrameCount++;
+            if (debugFrameCount >= DEBUG_FRAME_LIMIT) {
+                console.log('Debug logging disabled after', DEBUG_FRAME_LIMIT, 'frames');
+            }
         }
         
         requestAnimationFrame(render);
@@ -1016,4 +1203,4 @@ async function main() {
     render();
 }
 
-main();66666666666
+main();
