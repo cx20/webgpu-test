@@ -19,7 +19,7 @@ struct Uniforms {
     normalMatrix: mat4x4<f32>,
     lightDir: vec4<f32>,
     baseColor: vec4<f32>,
-    flags: vec4<u32>  // x: hasSkinning, y: hasTexture
+    flags: vec4<u32>  // x: hasSkinning, y: hasTexture, z: hasNormals
 };
 
 struct JointMatrices {
@@ -41,7 +41,8 @@ struct VertexOutput {
     @builtin(position) position: vec4<f32>,
     @location(0) vNormal: vec3<f32>,
     @location(1) vTexCoord: vec2<f32>,
-    @location(2) vPosition: vec3<f32>
+    @location(2) vPosition: vec3<f32>,
+    @location(3) vWorldPosition: vec3<f32>
 };
 
 @vertex
@@ -64,6 +65,7 @@ fn main(input: VertexInput) -> VertexOutput {
     
     let worldPosition = uniforms.modelMatrix * position;
     output.vPosition = worldPosition.xyz;
+    output.vWorldPosition = worldPosition.xyz;
     output.vNormal = (uniforms.normalMatrix * vec4<f32>(normal, 0.0)).xyz;
     output.vTexCoord = input.texCoord;
     output.position = uniforms.projectionMatrix * uniforms.viewMatrix * worldPosition;
@@ -91,12 +93,28 @@ struct Uniforms {
 struct FragmentInput {
     @location(0) vNormal: vec3<f32>,
     @location(1) vTexCoord: vec2<f32>,
-    @location(2) vPosition: vec3<f32>
+    @location(2) vPosition: vec3<f32>,
+    @location(3) vWorldPosition: vec3<f32>
 };
 
 @fragment
 fn main(input: FragmentInput) -> @location(0) vec4<f32> {
-    let normal = normalize(input.vNormal);
+    var normal: vec3<f32>;
+    
+    // Use interpolated normals if available, otherwise use flat shading
+    if (uniforms.flags.z == 1u) {
+        // Has normals: use interpolated normal
+        normal = normalize(input.vNormal);
+    } else {
+        // No normals: compute normal from surface derivatives for flat shading
+        // In screen space, we compute the normal using dFdx and dFdy
+        // dFdx returns the derivative of the input with respect to the screen x coordinate
+        // dFdy returns the derivative of the input with respect to the screen y coordinate
+        let ddx = dpdx(input.vWorldPosition);
+        let ddy = dpdy(input.vWorldPosition);
+        normal = normalize(cross(ddx, ddy));
+    }
+    
     let lightDir = normalize(uniforms.lightDir.xyz);
     
     let diff = max(dot(normal, lightDir), 0.0);

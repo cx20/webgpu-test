@@ -393,6 +393,7 @@ async function processMesh(device, gltf, buffers, baseUrl, meshIndex, defaultTex
             baseColor,
             hasTexture,
             hasSkinning,
+            hasNormals: normals !== null,
             bbox
         });
     }
@@ -1059,6 +1060,7 @@ async function main() {
             floatView.set(ground.track.color, 68);
             uintView[72] = 0; // hasSkinning
             uintView[73] = 0; // hasTexture
+            uintView[74] = 1; // hasNormals (ground tracks have normals)
             
             device.queue.writeBuffer(ground.uniformBuffer, 0, uniforms);
             
@@ -1147,6 +1149,7 @@ async function main() {
                         floatView.set(prim.baseColor, 68); // baseColor
                         uintView[72] = prim.hasSkinning && nodeSkin ? 1 : 0; // hasSkinning
                         uintView[73] = prim.hasTexture ? 1 : 0; // hasTexture
+                        uintView[74] = prim.hasNormals ? 1 : 0; // hasNormals
                         
                         device.queue.writeBuffer(instance.uniformBuffer, 0, uniforms);
                         
