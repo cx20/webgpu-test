@@ -73,24 +73,40 @@ async function init() {
     addToScene(scene, track2);
 
     // ---- Fox debug ----
+    function inspectNode(node, depth = 0) {
+        const indent = "  ".repeat(depth);
+        const hasMesh = "_gpu" in node && "material" in node;
+        const gpu = node._gpu;
+        console.log(
+            `${indent}[${depth}] name="${node.name}" _gpu=${hasMesh ? "YES" : "no"}` +
+            ` material=${node.material ? node.material.constructor?.name ?? "object" : "none"}` +
+            ` skeleton=${node.skeleton ? "YES" : "no"}` +
+            ` _children=${node._children?.length ?? 0}`
+        );
+        if (gpu) {
+            console.log(`${indent}    gpu.indexBuffer=`, gpu.indexBuffer ?? "(none)");
+            console.log(`${indent}    gpu.vertexBuffers=`, gpu.vertexBuffers ?? "(none)");
+            console.log(`${indent}    gpu.indexCount=`, gpu.indexCount ?? gpu.indicesCount ?? "(n/a)");
+            console.log(`${indent}    gpu keys:`, Object.keys(gpu));
+        }
+        if (node.material) {
+            console.log(`${indent}    material keys:`, Object.keys(node.material));
+            console.log(`${indent}    material._buildGroup=`, node.material._buildGroup ?? "(null)");
+        }
+        if (node.skeleton) {
+            console.log(`${indent}    skeleton keys:`, Object.keys(node.skeleton));
+            console.log(`${indent}    skeleton.boneCount=`, node.skeleton.boneCount);
+        }
+        for (const child of node._children ?? []) {
+            inspectNode(child, depth + 1);
+        }
+    }
+
     console.group("[Fox] loadGltf result");
     console.log("foxAsset keys:", Object.keys(foxAsset));
     console.log("foxAsset.entities.length:", foxAsset.entities?.length);
-    foxAsset.entities?.forEach((e, i) => {
-        const keys = Object.keys(e);
-        console.group(`  entity[${i}] name="${e.name ?? "(none)"}" constructor=${e.constructor?.name}`);
-        console.log("  keys:", keys);
-        console.log("  has _gpu:", "_gpu" in e);
-        console.log("  has material:", "material" in e);
-        console.log("  has skeleton:", "skeleton" in e);
-        console.log("  material:", e.material ?? null);
-        console.log("  skeleton:", e.skeleton ?? null);
-        console.log("  position:", e.position);
-        console.log("  scaling:", e.scaling);
-        console.log("  visibility:", e.visibility ?? "(n/a)");
-        console.log("  isEnabled:", typeof e.isEnabled === "function" ? e.isEnabled() : e.isEnabled ?? "(n/a)");
-        console.groupEnd();
-    });
+    console.log("--- entity tree ---");
+    foxAsset.entities?.forEach(e => inspectNode(e));
     console.log("animationGroups:", foxAsset.animationGroups?.map((ag, i) =>
         `[${i}] name="${ag.name}" stopped=${ag._stopped} isPlaying=${ag.isPlaying}`
     ));
@@ -106,24 +122,9 @@ async function init() {
     foxRoot.position.set(0, 0, 0);
     addToScene(scene, foxAsset);
 
-    console.group("[Fox] after addToScene");
-    console.log("scene._meshes count:", scene._meshes?.length ?? scene.meshes?.length ?? "(unknown key)");
-    // Check all scene collections for Fox entities
-    for (const key of Object.keys(scene)) {
-        const val = scene[key];
-        if (Array.isArray(val) && val.length > 0 && val.some(x => x && typeof x === "object" && x.name?.startsWith("Fox"))) {
-            console.log(`  scene.${key} has Fox entries:`, val.filter(x => x?.name?.startsWith("Fox")).map(x => x.name));
-        }
-    }
-    console.groupEnd();
-
     if (foxAsset.animationGroups?.length >= 3) {
         stopAnimation(foxAsset.animationGroups[0]); // Survey
         stopAnimation(foxAsset.animationGroups[1]); // Walk
-        console.log("[Fox] stopped Survey and Walk; Run state:", {
-            stopped: foxAsset.animationGroups[2]._stopped,
-            isPlaying: foxAsset.animationGroups[2].isPlaying,
-        });
     }
 
     // T-Rex
@@ -162,11 +163,8 @@ async function init() {
     console.group("[Fox] after registerScene");
     console.log("scene._renderables count:", scene._renderables?.length ?? "(unknown)");
     console.log("scene._deferredBuilders remaining:", scene._deferredBuilders?.length ?? 0);
-    const foxEntities = foxAsset.entities ?? [];
-    foxEntities.forEach((e, i) => {
-        console.log(`  fox entity[${i}] name="${e.name}" material._buildGroup:`,
-            e.material?._buildGroup ?? "(no material or _buildGroup)");
-    });
+    console.log("--- Fox entity tree after registerScene ---");
+    foxAsset.entities?.forEach(e => inspectNode(e));
     console.groupEnd();
     // ---- end post-register debug ----
 
