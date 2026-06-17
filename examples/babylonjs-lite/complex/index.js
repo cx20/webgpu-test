@@ -71,11 +71,7 @@ async function init() {
     const light2 = createDirectionalLight([-0.5, -0.5, -0.5]);
     addToScene(scene, light2);
 
-    await loadSkybox(
-        scene,
-        "https://raw.githubusercontent.com/mrdoob/three.js/3c13d929f8d9a02c89f010a487e73ff0e57437c4/examples/textures/cube/skyboxsun25deg/",
-        ".jpg"
-    );
+    await loadSkybox(scene, "https://playground.babylonjs.com/textures/skybox", ".jpg");
 
     onBeforeRender(scene, () => {
         cam.alpha -= 0.005;
