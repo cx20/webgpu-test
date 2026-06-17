@@ -29,6 +29,50 @@ const CAM_BETA = Math.acos(5 / CAM_RADIUS);
 // Quaternion for 90 degree rotation around Y axis
 const Q_Y90 = { x: 0, y: Math.sin(Math.PI / 4), z: 0, w: Math.cos(Math.PI / 4) };
 
+// Fox.gltf has no `indices` field (non-indexed geometry).
+// Babylon.js Lite only supports drawIndexed(), so we patch the GLTF at runtime
+// to add sequential indices [0, 1, 2, ..., N-1] and return a Blob URL.
+async function patchGltfAddIndices(gltfUrl) {
+    const baseUrl = gltfUrl.substring(0, gltfUrl.lastIndexOf("/") + 1);
+    const json = await fetch(gltfUrl).then(r => r.json());
+
+    const prim = json.meshes[0].primitives[0];
+    if (prim.indices != null) return gltfUrl; // already indexed, no patch needed
+
+    // Make existing buffer URIs absolute so they resolve from the Blob URL
+    for (const buf of json.buffers ?? []) {
+        if (buf.uri && !buf.uri.startsWith("data:") && !buf.uri.startsWith("http")) {
+            buf.uri = baseUrl + buf.uri;
+        }
+    }
+
+    const vertexCount = json.accessors[prim.attributes.POSITION].count;
+
+    // Build sequential UINT16 index buffer [0, 1, 2, ..., vertexCount-1]
+    const indices = new Uint16Array(vertexCount);
+    for (let i = 0; i < vertexCount; i++) indices[i] = i;
+
+    // Encode as base64 data URI
+    const bytes = new Uint8Array(indices.buffer);
+    let binary = "";
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    const dataUri = "data:application/octet-stream;base64," + btoa(binary);
+
+    const bufIdx = json.buffers.length;
+    json.buffers.push({ uri: dataUri, byteLength: indices.byteLength });
+
+    const bvIdx = json.bufferViews.length;
+    json.bufferViews.push({ buffer: bufIdx, byteOffset: 0, byteLength: indices.byteLength });
+
+    const accIdx = json.accessors.length;
+    json.accessors.push({ bufferView: bvIdx, componentType: 5123 /* UNSIGNED_SHORT */, count: vertexCount, type: "SCALAR" });
+
+    prim.indices = accIdx;
+
+    const blob = new Blob([JSON.stringify(json)], { type: "model/gltf+json" });
+    return URL.createObjectURL(blob);
+}
+
 async function init() {
     const canvas = document.querySelector("#c");
     const engine = await createEngine(canvas);
@@ -38,11 +82,17 @@ async function init() {
     scene.camera = cam;
     attachControl(cam, canvas, scene);
 
+    const foxUrl = await patchGltfAddIndices(
+        "https://cx20.github.io/gltf-test/sampleModels/Fox/glTF/Fox.gltf"
+    );
+
     const [truckAsset, foxAsset, trexAsset] = await Promise.all([
         loadGltf(engine, "https://cx20.github.io/gltf-test/sampleModels/CesiumMilkTruck/glTF/CesiumMilkTruck.gltf"),
-        loadGltf(engine, "https://cx20.github.io/gltf-test/sampleModels/Fox/glTF/Fox.gltf"),
+        loadGltf(engine, foxUrl),
         loadGltf(engine, "https://raw.githubusercontent.com/BabylonJS/Exporters/d66db9a7042fef66acb62e1b8770739463b0b567/Maya/Samples/glTF%202.0/T-Rex/trex.gltf"),
     ]);
+
+    URL.revokeObjectURL(foxUrl);
 
     // AssetContainer root is entities[0]: a TransformNode with scaling (-1,1,1)
     // Preserve the -1 x-scale when applying model scale: set(-scale, scale, scale)
@@ -53,10 +103,6 @@ async function init() {
     truckRoot.rotationQuaternion.set(Q_Y90.x, Q_Y90.y, Q_Y90.z, Q_Y90.w);
     truckRoot.position.set(0, 0, 2);
     addToScene(scene, truckAsset);
-
-    console.group("[Truck] entity tree (no skin - for comparison)");
-    truckAsset.entities?.forEach(e => inspectTree(e));
-    console.groupEnd();
 
     // Wheel tracks: two thin planes in the XZ plane (rotated from XY)
     // Matching Babylon.js: CreatePlane({width:100, height:0.1}), rotated PI/2 around X
@@ -76,35 +122,6 @@ async function init() {
     track2.material = trackMaterial;
     addToScene(scene, track2);
 
-    // ---- Fox debug ----
-    function inspectTree(node, depth = 0) {
-        const indent = "  ".repeat(depth);
-        const hasGpu = "_gpu" in node;
-        const hasMat = "material" in node;
-        const children = node.children ?? [];
-        let line = `${indent}[${depth}] "${node.name}" _gpu=${hasGpu} material=${hasMat} children=${children.length}`;
-        if (hasGpu && node._gpu) {
-            const g = node._gpu;
-            const gkeys = Object.keys(g);
-            const idxCount = g.indexCount ?? g.indicesCount ?? g.indexBuffer?.size ?? "(n/a)";
-            line += ` | gpu keys:[${gkeys.join(",")}] indexCount=${idxCount}`;
-        }
-        if (hasMat && node.material) {
-            const bg = node.material._buildGroup;
-            line += ` | _buildGroup=${bg === null ? "null" : bg === undefined ? "undefined" : "SET"}`;
-            line += ` | mat keys:[${Object.keys(node.material).join(",")}]`;
-        }
-        if ("skeleton" in node && node.skeleton) {
-            line += ` | skeleton boneCount=${node.skeleton.boneCount}`;
-        }
-        console.log(line);
-        for (const child of children) inspectTree(child, depth + 1);
-    }
-
-    console.group("[Fox] entity tree");
-    foxAsset.entities?.forEach(e => inspectTree(e));
-    console.groupEnd();
-
     // Fox (GLtF animations: Survey[0], Walk[1], Run[2])
     // addToScene auto-registers and plays all animation groups;
     // stop Survey and Walk so only Run plays (matches Babylon.js animationGroups[2].play(true))
@@ -113,17 +130,12 @@ async function init() {
     foxRoot.rotationQuaternion.set(Q_Y90.x, Q_Y90.y, Q_Y90.z, Q_Y90.w);
     foxRoot.position.set(0, 0, 0);
     addToScene(scene, foxAsset);
-
     if (foxAsset.animationGroups?.length >= 3) {
         stopAnimation(foxAsset.animationGroups[0]); // Survey
         stopAnimation(foxAsset.animationGroups[1]); // Walk
     }
 
     // T-Rex
-    console.group("[T-Rex] entity tree (for comparison)");
-    trexAsset.entities?.forEach(e => inspectTree(e));
-    console.groupEnd();
-
     const trexRoot = trexAsset.entities[0];
     trexRoot.rotationQuaternion.set(Q_Y90.x, Q_Y90.y, Q_Y90.z, Q_Y90.w);
     trexRoot.position.set(0, 0, -3);
@@ -154,13 +166,6 @@ async function init() {
     });
 
     await registerScene(scene);
-
-    // ---- post-register debug ----
-    console.group("[Fox] entity tree after registerScene");
-    foxAsset.entities?.forEach(e => inspectTree(e));
-    console.groupEnd();
-    // ---- end post-register debug ----
-
     await startEngine(engine);
 }
 
