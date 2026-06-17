@@ -73,7 +73,7 @@ async function init() {
 
     await loadEnvironment(scene, "https://assets.babylonjs.com/core/environments/environmentSpecular.env", {
         skyboxUrl: "https://assets.babylonjs.com/core/environments/backgroundSkybox.dds",
-        brdfUrl: "https://assets.babylonjs.com/core/environments/brdfLUT.png",
+        brdfUrl: "https://raw.githubusercontent.com/BabylonJS/Babylon-Lite/master/lab/public/brdf-lut.png",
     });
 
     onBeforeRender(scene, () => {
