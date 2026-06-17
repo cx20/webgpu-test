@@ -75,43 +75,43 @@ async function init() {
     // ---- Fox debug ----
     function inspectNode(node, depth = 0) {
         const indent = "  ".repeat(depth);
-        const hasMesh = "_gpu" in node && "material" in node;
-        const gpu = node._gpu;
+        const allKeys = [];
+        for (const k in node) allKeys.push(k); // includes non-own enumerable
+        const ownKeys = Object.keys(node);
+        const childrenVal = node._children;
         console.log(
-            `${indent}[${depth}] name="${node.name}" _gpu=${hasMesh ? "YES" : "no"}` +
-            ` material=${node.material ? node.material.constructor?.name ?? "object" : "none"}` +
-            ` skeleton=${node.skeleton ? "YES" : "no"}` +
-            ` _children=${node._children?.length ?? 0}`
+            `${indent}name="${node.name}" _gpu=${"_gpu" in node}` +
+            ` material=${"material" in node}` +
+            ` skeleton=${"skeleton" in node}` +
+            ` _children type=${Array.isArray(childrenVal) ? "Array("+childrenVal.length+")" : typeof childrenVal}`
         );
-        if (gpu) {
-            console.log(`${indent}    gpu.indexBuffer=`, gpu.indexBuffer ?? "(none)");
-            console.log(`${indent}    gpu.vertexBuffers=`, gpu.vertexBuffers ?? "(none)");
-            console.log(`${indent}    gpu.indexCount=`, gpu.indexCount ?? gpu.indicesCount ?? "(n/a)");
-            console.log(`${indent}    gpu keys:`, Object.keys(gpu));
+        console.log(`${indent}  ownKeys:`, ownKeys);
+        if ("_gpu" in node && node._gpu) {
+            const g = node._gpu;
+            console.log(`${indent}  gpu keys:`, Object.keys(g));
+            console.log(`${indent}  gpu.indexCount=`, g.indexCount ?? g.indicesCount ?? g.count ?? "(n/a)");
         }
-        if (node.material) {
-            console.log(`${indent}    material keys:`, Object.keys(node.material));
-            console.log(`${indent}    material._buildGroup=`, node.material._buildGroup ?? "(null)");
+        if ("material" in node && node.material) {
+            console.log(`${indent}  material._buildGroup=`, node.material._buildGroup ?? "(null)");
         }
-        if (node.skeleton) {
-            console.log(`${indent}    skeleton keys:`, Object.keys(node.skeleton));
-            console.log(`${indent}    skeleton.boneCount=`, node.skeleton.boneCount);
-        }
-        for (const child of node._children ?? []) {
+        for (const child of childrenVal ?? []) {
             inspectNode(child, depth + 1);
         }
     }
 
     console.group("[Fox] loadGltf result");
     console.log("foxAsset keys:", Object.keys(foxAsset));
-    console.log("foxAsset.entities.length:", foxAsset.entities?.length);
-    console.log("--- entity tree ---");
+    console.log("foxRoot ownKeys:", Object.keys(foxAsset.entities[0]));
+    console.log("foxRoot full props (for..in):");
+    const foxRootProps = {};
+    for (const k in foxAsset.entities[0]) foxRootProps[k] = typeof foxAsset.entities[0][k];
+    console.log(foxRootProps);
+    console.log("--- Fox entity tree ---");
     foxAsset.entities?.forEach(e => inspectNode(e));
     console.log("animationGroups:", foxAsset.animationGroups?.map((ag, i) =>
-        `[${i}] name="${ag.name}" stopped=${ag._stopped} isPlaying=${ag.isPlaying}`
+        `[${i}] name="${ag.name}" stopped=${ag._stopped}`
     ));
     console.groupEnd();
-    // ---- end Fox debug ----
 
     // Fox (GLtF animations: Survey[0], Walk[1], Run[2])
     // addToScene auto-registers and plays all animation groups;
@@ -128,6 +128,12 @@ async function init() {
     }
 
     // T-Rex
+    console.group("[T-Rex] loadGltf result (for comparison)");
+    console.log("entities.length:", trexAsset.entities?.length);
+    console.log("--- T-Rex entity tree ---");
+    trexAsset.entities?.forEach(e => inspectNode(e));
+    console.groupEnd();
+
     const trexRoot = trexAsset.entities[0];
     trexRoot.rotationQuaternion.set(Q_Y90.x, Q_Y90.y, Q_Y90.z, Q_Y90.w);
     trexRoot.position.set(0, 0, -3);
