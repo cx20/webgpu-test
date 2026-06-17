@@ -6,8 +6,8 @@ import {
     createEngine,
     createHemisphericLight,
     createSceneContext,
+    loadEnvironment,
     loadGltf,
-    loadSkybox,
     onBeforeRender,
     playAnimation,
     registerScene,
@@ -71,7 +71,10 @@ async function init() {
     const light2 = createDirectionalLight([-0.5, -0.5, -0.5]);
     addToScene(scene, light2);
 
-    await loadSkybox(scene, "https://playground.babylonjs.com/textures/skybox", ".jpg");
+    await loadEnvironment(scene, "https://assets.babylonjs.com/core/environments/environmentSpecular.env", {
+        skyboxUrl: "https://assets.babylonjs.com/core/environments/backgroundSkybox.dds",
+        brdfUrl: "https://assets.babylonjs.com/core/environments/brdfLUT.png",
+    });
 
     onBeforeRender(scene, () => {
         cam.alpha -= 0.005;
