@@ -6,24 +6,21 @@ import {
     createEngine,
     createHemisphericLight,
     createSceneContext,
-    loadEnvironment,
     loadGltf,
+    loadSkybox,
     onBeforeRender,
     registerScene,
     startEngine,
     stopAnimation,
 } from "https://esm.sh/@babylonjs/lite@1.0.1";
 
-const ENV_URL = "https://assets.babylonjs.com/core/environments/environmentSpecular.env";
-const BRDF_URL = "https://raw.githubusercontent.com/BabylonJS/Babylon-Lite/master/lab/public/brdf-lut.png";
-
 // Match Babylon.js: camera.setPosition(new BABYLON.Vector3(0, 5, 15))
-// ArcRotateCamera formula: x = r*cos(a)*sin(b), y = r*cos(b), z = r*sin(a)*sin(b)
-// → alpha = PI/2, beta = acos(5/sqrt(250)), radius = sqrt(250)
+// ArcRotateCamera: x=r*cos(a)*sin(b), y=r*cos(b), z=r*sin(a)*sin(b)
+// → alpha=PI/2, beta=acos(5/sqrt(250)), radius=sqrt(250)
 const CAM_RADIUS = Math.sqrt(250);
 const CAM_BETA = Math.acos(5 / CAM_RADIUS);
 
-// Quaternion for 90 degree rotation around Y axis
+// Quaternion for 90° rotation around Y axis
 const Q_Y90 = { x: 0, y: Math.sin(Math.PI / 4), z: 0, w: Math.cos(Math.PI / 4) };
 
 async function init() {
@@ -41,8 +38,8 @@ async function init() {
         loadGltf(engine, "https://raw.githubusercontent.com/BabylonJS/Exporters/d66db9a7042fef66acb62e1b8770739463b0b567/Maya/Samples/glTF%202.0/T-Rex/trex.gltf"),
     ]);
 
-    // AssetContainer root is entities[0] (TransformNode with scaling (-1,1,1) for coord system)
-    // Preserve the -1 x-scale while applying model scale: scaling.set(-s, s, s)
+    // AssetContainer root is entities[0]: a TransformNode with scaling (-1,1,1)
+    // Preserve the -1 x-scale while applying model scale: set(-scale, scale, scale)
 
     // CesiumMilkTruck
     const truckRoot = truckAsset.entities[0];
@@ -51,17 +48,17 @@ async function init() {
     truckRoot.position.set(0, 0, 2);
     addToScene(scene, truckAsset);
 
-    // Fox - addToScene auto-plays all 3 animation groups (Survey/Walk/Run).
-    // Stop Survey[0] and Walk[1] to match Babylon.js which only plays Run[2].
+    // Fox (GLtF animations: Survey[0], Walk[1], Run[2])
+    // addToScene auto-plays all animation groups; stop Survey and Walk,
+    // keep Run playing to match Babylon.js (animationGroups[2].play(true))
     const foxRoot = foxAsset.entities[0];
     foxRoot.scaling.set(-0.05, 0.05, 0.05);
     foxRoot.rotationQuaternion.set(Q_Y90.x, Q_Y90.y, Q_Y90.z, Q_Y90.w);
     foxRoot.position.set(0, 0, 0);
     addToScene(scene, foxAsset);
-    if (foxAsset.animationGroups) {
-        if (foxAsset.animationGroups[0]) stopAnimation(foxAsset.animationGroups[0]); // Survey
-        if (foxAsset.animationGroups[1]) stopAnimation(foxAsset.animationGroups[1]); // Walk
-        // animationGroups[2] (Run) keeps playing via auto-play
+    if (foxAsset.animationGroups?.length >= 3) {
+        stopAnimation(foxAsset.animationGroups[0]); // Survey
+        stopAnimation(foxAsset.animationGroups[1]); // Walk
     }
 
     // T-Rex
@@ -79,12 +76,8 @@ async function init() {
     const light2 = createDirectionalLight([-0.5, -0.5, -0.5]);
     addToScene(scene, light2);
 
-    await loadEnvironment(scene, ENV_URL, {
-        groundTextureUrl: "https://assets.babylonjs.com/core/environments/backgroundGround.png",
-        skyboxUrl: "https://assets.babylonjs.com/core/environments/backgroundSkybox.dds",
-        skyboxSize: 1000,
-        brdfUrl: BRDF_URL,
-    });
+    // Playground skybox: files follow the _px/_nx naming convention that loadSkybox uses
+    await loadSkybox(scene, "https://playground.babylonjs.com/textures/skybox", ".jpg");
 
     onBeforeRender(scene, () => {
         cam.alpha -= 0.005;
