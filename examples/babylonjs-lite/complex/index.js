@@ -27,11 +27,14 @@ const CAM_BETA = Math.acos(5 / CAM_RADIUS);
 // Quaternion for 90 degree rotation around Y axis
 const Q_Y90 = { x: 0, y: Math.sin(Math.PI / 4), z: 0, w: Math.cos(Math.PI / 4) };
 
-// Fox.gltf has two issues for Babylon.js Lite:
-// 1. No `indices` field (non-indexed geometry) — Lite always calls drawIndexed()
-// 2. No NORMAL attribute — PBR shader needs normals for lighting
-// We also set doubleSided=true to fix backface culling with negative-X scaling.
-async function patchGltfAddIndices(gltfUrl) {
+// Fox.gltf has no `indices` field (non-indexed geometry).
+// Babylon.js Lite only supports drawIndexed(), so we patch at runtime:
+//   - add sequential indices [0..N-1]
+//   - synthesize flat normals from POSITION data (NORMAL attribute is absent)
+//   - set doubleSided=true to prevent backface culling with negative-X scale
+// NOTE: Despite these patches, Fox is not rendered correctly in Babylon.js Lite v1.0.1.
+//       Non-indexed glTF geometry is a known limitation of this engine version.
+async function patchGltfForLite(gltfUrl) {
     const baseUrl = gltfUrl.substring(0, gltfUrl.lastIndexOf("/") + 1);
     const json = await fetch(gltfUrl).then(r => r.json());
     const prim = json.meshes[0].primitives[0];
@@ -42,10 +45,6 @@ async function patchGltfAddIndices(gltfUrl) {
     for (const img of json.images ?? []) { if (img.uri) img.uri = makeAbsolute(img.uri); }
 
     for (const mat of json.materials ?? []) mat.doubleSided = true;
-
-    // TEST: Remove skinning to confirm static mesh renders correctly
-    for (const node of json.nodes ?? []) { if (node.skin != null) delete node.skin; }
-    if (json.skins) json.skins.length = 0;
 
     const toBase64 = (typedArray) => {
         const bytes = new Uint8Array(typedArray.buffer);
@@ -71,7 +70,6 @@ async function patchGltfAddIndices(gltfUrl) {
     }
 
     if (prim.attributes.NORMAL == null) {
-        // Fetch position data to compute proper flat normals
         const posAcc = json.accessors[prim.attributes.POSITION];
         const posBv = json.bufferViews[posAcc.bufferView];
         const binData = await fetch(json.buffers[posBv.buffer].uri).then(r => r.arrayBuffer());
@@ -107,7 +105,6 @@ async function patchGltfAddIndices(gltfUrl) {
         const normAccIdx = json.accessors.length;
         json.accessors.push({ bufferView: normBvIdx, componentType: 5126, count: vertexCount, type: "VEC3" });
         prim.attributes.NORMAL = normAccIdx;
-        console.log("[Fox patch] Added synthetic flat normals, vertexCount:", vertexCount);
     }
 
     const blob = new Blob([JSON.stringify(json)], { type: "model/gltf+json" });
@@ -123,7 +120,7 @@ async function init() {
     scene.camera = cam;
     attachControl(cam, canvas, scene);
 
-    const foxGltfUrl = await patchGltfAddIndices(
+    const foxGltfUrl = await patchGltfForLite(
         "https://cx20.github.io/gltf-test/sampleModels/Fox/glTF/Fox.gltf"
     );
 
@@ -134,12 +131,6 @@ async function init() {
     ]);
 
     URL.revokeObjectURL(foxGltfUrl);
-
-    const foxMesh = foxAsset.entities[0]?.children?.[1]?.children?.[0];
-    console.log("[Fox] mesh indexCount:", foxMesh?._gpu?.indexCount,
-        "hasNormal:", !!(foxMesh?._gpu?.normalBuffer),
-        "hasSkeleton:", !!(foxMesh?._gpu?.skeleton ?? foxMesh?.skeleton),
-        "material:", !!foxMesh?.material);
 
     const truckRoot = truckAsset.entities[0];
     truckRoot.scaling.set(-0.4, 0.4, 0.4);
@@ -170,7 +161,7 @@ async function init() {
     if (foxAsset.animationGroups?.length >= 3) {
         stopAnimation(foxAsset.animationGroups[0]); // Survey
         stopAnimation(foxAsset.animationGroups[1]); // Walk
-        // animationGroups[2] = Run — keep playing
+        // animationGroups[2] = Run
     }
 
     const trexRoot = trexAsset.entities[0];
@@ -196,9 +187,6 @@ async function init() {
     onBeforeRender(scene, () => { cam.alpha -= 0.005; });
 
     await registerScene(scene);
-
-    console.log("[scene] renderables:", scene._renderables?.length);
-
     await startEngine(engine);
 }
 
