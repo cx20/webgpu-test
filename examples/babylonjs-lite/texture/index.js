@@ -19,7 +19,7 @@ async function init() {
     scene.clearColor = { r: 1.0, g: 1.0, b: 1.0, a: 1.0 };
     scene.camera = createFreeCamera({ x: 0, y: 0, z: -3 }, { x: 0, y: 0, z: 0 });
 
-    const cube = createBox(engine, { size: 1.0 });
+    const cube = createBox(engine, 1.0);
     const material = createStandardMaterial();
     material.diffuseTexture = await loadTexture2D(engine, "../../../assets/textures/frog.jpg");
     material.emissiveColor = [1, 1, 1];

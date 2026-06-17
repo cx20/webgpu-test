@@ -45,7 +45,7 @@ async function init() {
     plane.position.set(-1.5, 1.5, 0);
     plane.material = materialA;
 
-    const cube = createBox(engine, { size: 1.0 });
+    const cube = createBox(engine, 1.0);
     cube.position.set(0, 1.5, 0);
     cube.material = materialA;
 
