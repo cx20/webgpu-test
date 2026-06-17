@@ -72,6 +72,31 @@ async function init() {
     track2.material = trackMaterial;
     addToScene(scene, track2);
 
+    // ---- Fox debug ----
+    console.group("[Fox] loadGltf result");
+    console.log("foxAsset keys:", Object.keys(foxAsset));
+    console.log("foxAsset.entities.length:", foxAsset.entities?.length);
+    foxAsset.entities?.forEach((e, i) => {
+        const keys = Object.keys(e);
+        console.group(`  entity[${i}] name="${e.name ?? "(none)"}" constructor=${e.constructor?.name}`);
+        console.log("  keys:", keys);
+        console.log("  has _gpu:", "_gpu" in e);
+        console.log("  has material:", "material" in e);
+        console.log("  has skeleton:", "skeleton" in e);
+        console.log("  material:", e.material ?? null);
+        console.log("  skeleton:", e.skeleton ?? null);
+        console.log("  position:", e.position);
+        console.log("  scaling:", e.scaling);
+        console.log("  visibility:", e.visibility ?? "(n/a)");
+        console.log("  isEnabled:", typeof e.isEnabled === "function" ? e.isEnabled() : e.isEnabled ?? "(n/a)");
+        console.groupEnd();
+    });
+    console.log("animationGroups:", foxAsset.animationGroups?.map((ag, i) =>
+        `[${i}] name="${ag.name}" stopped=${ag._stopped} isPlaying=${ag.isPlaying}`
+    ));
+    console.groupEnd();
+    // ---- end Fox debug ----
+
     // Fox (GLtF animations: Survey[0], Walk[1], Run[2])
     // addToScene auto-registers and plays all animation groups;
     // stop Survey and Walk so only Run plays (matches Babylon.js animationGroups[2].play(true))
@@ -80,9 +105,25 @@ async function init() {
     foxRoot.rotationQuaternion.set(Q_Y90.x, Q_Y90.y, Q_Y90.z, Q_Y90.w);
     foxRoot.position.set(0, 0, 0);
     addToScene(scene, foxAsset);
+
+    console.group("[Fox] after addToScene");
+    console.log("scene._meshes count:", scene._meshes?.length ?? scene.meshes?.length ?? "(unknown key)");
+    // Check all scene collections for Fox entities
+    for (const key of Object.keys(scene)) {
+        const val = scene[key];
+        if (Array.isArray(val) && val.length > 0 && val.some(x => x && typeof x === "object" && x.name?.startsWith("Fox"))) {
+            console.log(`  scene.${key} has Fox entries:`, val.filter(x => x?.name?.startsWith("Fox")).map(x => x.name));
+        }
+    }
+    console.groupEnd();
+
     if (foxAsset.animationGroups?.length >= 3) {
         stopAnimation(foxAsset.animationGroups[0]); // Survey
         stopAnimation(foxAsset.animationGroups[1]); // Walk
+        console.log("[Fox] stopped Survey and Walk; Run state:", {
+            stopped: foxAsset.animationGroups[2]._stopped,
+            isPlaying: foxAsset.animationGroups[2].isPlaying,
+        });
     }
 
     // T-Rex
@@ -116,6 +157,19 @@ async function init() {
     });
 
     await registerScene(scene);
+
+    // ---- post-register debug ----
+    console.group("[Fox] after registerScene");
+    console.log("scene._renderables count:", scene._renderables?.length ?? "(unknown)");
+    console.log("scene._deferredBuilders remaining:", scene._deferredBuilders?.length ?? 0);
+    const foxEntities = foxAsset.entities ?? [];
+    foxEntities.forEach((e, i) => {
+        console.log(`  fox entity[${i}] name="${e.name}" material._buildGroup:`,
+            e.material?._buildGroup ?? "(no material or _buildGroup)");
+    });
+    console.groupEnd();
+    // ---- end post-register debug ----
+
     await startEngine(engine);
 }
 
