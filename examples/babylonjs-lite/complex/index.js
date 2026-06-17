@@ -39,12 +39,10 @@ async function patchGltfAddIndices(gltfUrl) {
     const prim = json.meshes[0].primitives[0];
     if (prim.indices != null) return gltfUrl; // already indexed, no patch needed
 
-    // Make existing buffer URIs absolute so they resolve from the Blob URL
-    for (const buf of json.buffers ?? []) {
-        if (buf.uri && !buf.uri.startsWith("data:") && !buf.uri.startsWith("http")) {
-            buf.uri = baseUrl + buf.uri;
-        }
-    }
+    // Make existing buffer and image URIs absolute so they resolve from the Blob URL
+    const makeAbsolute = uri => (uri && !uri.startsWith("data:") && !uri.match(/^https?:\/\//) ? baseUrl + uri : uri);
+    for (const buf of json.buffers ?? []) { if (buf.uri) buf.uri = makeAbsolute(buf.uri); }
+    for (const img of json.images ?? []) { if (img.uri) img.uri = makeAbsolute(img.uri); }
 
     const vertexCount = json.accessors[prim.attributes.POSITION].count;
 
