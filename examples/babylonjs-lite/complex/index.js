@@ -112,10 +112,21 @@ async function init() {
     foxRoot.rotationQuaternion.set(Q_Y90.x, Q_Y90.y, Q_Y90.z, Q_Y90.w);
     foxRoot.position.set(0, 0, 0);
     addToScene(scene, foxAsset);
-    if (foxAsset.animationGroups?.length >= 3) {
-        stopAnimation(foxAsset.animationGroups[0]); // Survey
-        stopAnimation(foxAsset.animationGroups[1]); // Walk
-    }
+    // Stop ALL animations to test bind pose visibility
+    for (const ag of foxAsset.animationGroups ?? []) stopAnimation(ag);
+    console.log("[Fox] all animations stopped. animationGroups:",
+        foxAsset.animationGroups?.map(ag => `${ag.name} stopped=${ag._stopped}`));
+
+    // Log Fox mesh world matrix after first render to confirm world position
+    let foxFrameCount = 0;
+    const foxMeshNode = foxAsset.entities[0]?.children?.[1]?.children?.[0];
+    onBeforeRender(scene, () => {
+        if (foxFrameCount++ === 2 && foxMeshNode) {
+            const wm = foxMeshNode.worldMatrix;
+            console.log("[Fox] worldMatrix after 2 frames:", wm ? Array.from(wm).map(v => v.toFixed(3)).join(",") : "(none)");
+            console.log("[Fox] foxRoot.position:", foxRoot.position, "scaling:", foxRoot.scaling);
+        }
+    });
 
     const trexRoot = trexAsset.entities[0];
     trexRoot.rotationQuaternion.set(Q_Y90.x, Q_Y90.y, Q_Y90.z, Q_Y90.w);
