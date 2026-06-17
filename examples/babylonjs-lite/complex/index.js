@@ -54,8 +54,8 @@ async function init() {
     truckRoot.position.set(0, 0, 2);
     addToScene(scene, truckAsset);
 
-    console.group("[Truck] root (no skin - for comparison)");
-    dumpNode("truckRoot", truckAsset.entities[0]);
+    console.group("[Truck] entity tree (no skin - for comparison)");
+    truckAsset.entities?.forEach(e => inspectTree(e));
     console.groupEnd();
 
     // Wheel tracks: two thin planes in the XZ plane (rotated from XY)
@@ -77,36 +77,32 @@ async function init() {
     addToScene(scene, track2);
 
     // ---- Fox debug ----
-    function dumpNode(label, node) {
-        const ownKeys = Object.keys(node);
-        const protoKeys = Object.getOwnPropertyNames(Object.getPrototypeOf(node) ?? {});
-        console.log(`${label} ownKeys: ${ownKeys.join(", ")}`);
-        console.log(`${label} protoKeys: ${protoKeys.join(", ")}`);
-        // Check every possible "children" property name
-        for (const k of [...ownKeys, ...protoKeys]) {
-            const v = node[k];
-            if (Array.isArray(v) && v.length > 0 && v[0] && typeof v[0] === "object") {
-                console.log(`  ${label}.${k} = Array(${v.length}) of objects [first name="${v[0].name}"]`);
-            }
+    function inspectTree(node, depth = 0) {
+        const indent = "  ".repeat(depth);
+        const hasGpu = "_gpu" in node;
+        const hasMat = "material" in node;
+        const children = node.children ?? [];
+        let line = `${indent}[${depth}] "${node.name}" _gpu=${hasGpu} material=${hasMat} children=${children.length}`;
+        if (hasGpu && node._gpu) {
+            const g = node._gpu;
+            const gkeys = Object.keys(g);
+            const idxCount = g.indexCount ?? g.indicesCount ?? g.indexBuffer?.size ?? "(n/a)";
+            line += ` | gpu keys:[${gkeys.join(",")}] indexCount=${idxCount}`;
         }
+        if (hasMat && node.material) {
+            const bg = node.material._buildGroup;
+            line += ` | _buildGroup=${bg === null ? "null" : bg === undefined ? "undefined" : "SET"}`;
+            line += ` | mat keys:[${Object.keys(node.material).join(",")}]`;
+        }
+        if ("skeleton" in node && node.skeleton) {
+            line += ` | skeleton boneCount=${node.skeleton.boneCount}`;
+        }
+        console.log(line);
+        for (const child of children) inspectTree(child, depth + 1);
     }
 
-    console.group("[Fox] loadGltf result");
-    dumpNode("foxRoot", foxAsset.entities[0]);
-    console.log("animationGroups:", foxAsset.animationGroups?.map((ag, i) =>
-        `[${i}] name="${ag.name ?? i}" stopped=${ag._stopped}`
-    ));
-    // Inspect animation group internals for mesh references
-    const ag = foxAsset.animationGroups?.[0];
-    if (ag) {
-        console.log("animationGroup[0] keys:", Object.keys(ag).join(", "));
-        for (const k of Object.keys(ag)) {
-            const v = ag[k];
-            if (v && typeof v === "object" && !Array.isArray(v)) {
-                console.log(`  ag.${k} keys:`, Object.keys(v).join(", "));
-            }
-        }
-    }
+    console.group("[Fox] entity tree");
+    foxAsset.entities?.forEach(e => inspectTree(e));
     console.groupEnd();
 
     // Fox (GLtF animations: Survey[0], Walk[1], Run[2])
@@ -124,10 +120,8 @@ async function init() {
     }
 
     // T-Rex
-    console.group("[T-Rex] loadGltf result (for comparison)");
-    console.log("entities.length:", trexAsset.entities?.length);
-    console.log("--- T-Rex entity tree ---");
-    trexAsset.entities?.forEach(e => inspectNode(e));
+    console.group("[T-Rex] entity tree (for comparison)");
+    trexAsset.entities?.forEach(e => inspectTree(e));
     console.groupEnd();
 
     const trexRoot = trexAsset.entities[0];
@@ -162,16 +156,8 @@ async function init() {
     await registerScene(scene);
 
     // ---- post-register debug ----
-    console.group("[Scene] after registerScene");
-    console.log("scene._renderables count:", scene._renderables?.length);
-    // Dump all scene keys and array-type properties
-    for (const k of Object.keys(scene)) {
-        const v = scene[k];
-        if (Array.isArray(v)) {
-            const names = v.map(x => x?.name ?? x?.constructor?.name ?? typeof x).join(", ");
-            console.log(`  scene.${k}[${v.length}]: ${names.slice(0, 120)}`);
-        }
-    }
+    console.group("[Fox] entity tree after registerScene");
+    foxAsset.entities?.forEach(e => inspectTree(e));
     console.groupEnd();
     // ---- end post-register debug ----
 
