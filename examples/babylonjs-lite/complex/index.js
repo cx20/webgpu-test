@@ -43,6 +43,10 @@ async function patchGltfAddIndices(gltfUrl) {
 
     for (const mat of json.materials ?? []) mat.doubleSided = true;
 
+    // TEST: Remove skinning to confirm static mesh renders correctly
+    for (const node of json.nodes ?? []) { if (node.skin != null) delete node.skin; }
+    if (json.skins) json.skins.length = 0;
+
     const toBase64 = (typedArray) => {
         const bytes = new Uint8Array(typedArray.buffer);
         let binary = "";
@@ -133,7 +137,9 @@ async function init() {
 
     const foxMesh = foxAsset.entities[0]?.children?.[1]?.children?.[0];
     console.log("[Fox] mesh indexCount:", foxMesh?._gpu?.indexCount,
-        "hasNormal:", !!(foxMesh?._gpu?.normalBuffer), "material:", !!foxMesh?.material);
+        "hasNormal:", !!(foxMesh?._gpu?.normalBuffer),
+        "hasSkeleton:", !!(foxMesh?._gpu?.skeleton ?? foxMesh?.skeleton),
+        "material:", !!foxMesh?.material);
 
     const truckRoot = truckAsset.entities[0];
     truckRoot.scaling.set(-0.4, 0.4, 0.4);
