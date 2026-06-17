@@ -3,7 +3,6 @@ import {
     attachControl,
     createArcRotateCamera,
     createEngine,
-    createFreeCamera,
     createSceneContext,
     loadGltf,
     registerScene,
@@ -60,8 +59,10 @@ async function init() {
     const engine = await createEngine(canvas);
     const scene = createSceneContext(engine);
 
-    // Use a simple free camera looking at the origin
-    scene.camera = createFreeCamera({ x: 0, y: 0, z: -5 }, { x: 0, y: 0, z: 0 });
+    // Triangle vertices: (0,0,0)-(1,1,0) range; orbit camera targeting (0.5, 0.5, 0)
+    const cam = createArcRotateCamera(Math.PI / 2, Math.PI / 3, 5, { x: 0.5, y: 0.5, z: 0 });
+    scene.camera = cam;
+    attachControl(cam, canvas, scene);
 
     // Test 1: Triangle (indexed - should work natively)
     const triangleUrl = "https://cx20.github.io/gltf-test/tutorialModels/Triangle/glTF/Triangle.gltf";
@@ -77,29 +78,43 @@ async function init() {
 
     URL.revokeObjectURL(triangleNoIdxUrl);
 
+    function logMeshNode(node, prefix = "") {
+        const hasGpu = "_gpu" in node;
+        const hasMat = "material" in node;
+        const idx = node._gpu?.indexCount;
+        const bg = node.material?._buildGroup;
+        console.log(
+            `${prefix}"${node.name}" _gpu=${hasGpu} material=${hasMat}` +
+            ` indexCount=${idx ?? "n/a"}` +
+            ` _buildGroup=${bg === null ? "null" : bg === undefined ? "undefined" : "SET"}`
+        );
+        for (const c of node.children ?? []) logMeshNode(c, prefix + "  ");
+    }
+
     if (triangleAsset) {
-        const root = triangleAsset.entities[0];
-        root.position.set(-1.5, 0, 0);
+        // No position offset - place at origin so camera (targeting 0.5,0.5,0) can see it
         addToScene(scene, triangleAsset);
-        console.log("[Triangle] added to scene. entities:", triangleAsset.entities.length);
-        // Log mesh
-        triangleAsset.entities[0].children?.forEach(c => {
-            console.log(`  child: "${c.name}" _gpu=${!!c._gpu} indexCount=${c._gpu?.indexCount}`);
-            c.children?.forEach(gc => console.log(`    grandchild: "${gc.name}" _gpu=${!!gc._gpu} indexCount=${gc._gpu?.indexCount}`));
-        });
+        console.group("[Triangle] after addToScene");
+        logMeshNode(triangleAsset.entities[0]);
+        console.groupEnd();
     }
     if (triangleNoIdxAsset) {
-        const root = triangleNoIdxAsset.entities[0];
-        root.position.set(1.5, 0, 0);
+        triangleNoIdxAsset.entities[0].position.set(2, 0, 0);
         addToScene(scene, triangleNoIdxAsset);
-        console.log("[TriangleNoIdx] added to scene. entities:", triangleNoIdxAsset.entities.length);
-        triangleNoIdxAsset.entities[0].children?.forEach(c => {
-            console.log(`  child: "${c.name}" _gpu=${!!c._gpu} indexCount=${c._gpu?.indexCount}`);
-            c.children?.forEach(gc => console.log(`    grandchild: "${gc.name}" _gpu=${!!gc._gpu} indexCount=${gc._gpu?.indexCount}`));
-        });
+        console.group("[TriangleNoIdx] after addToScene");
+        logMeshNode(triangleNoIdxAsset.entities[0]);
+        console.groupEnd();
     }
 
     await registerScene(scene);
+
+    console.log("scene._renderables after registerScene:", scene._renderables?.length);
+    if (triangleAsset) {
+        console.group("[Triangle] after registerScene");
+        logMeshNode(triangleAsset.entities[0]);
+        console.groupEnd();
+    }
+
     await startEngine(engine);
 }
 
