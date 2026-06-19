@@ -7,7 +7,7 @@ import {
     createShaderMaterial,
     registerScene,
     startEngine,
-} from "https://esm.sh/@babylonjs/lite@1.0.1";
+} from "https://esm.sh/@babylonjs/lite@1.2.0";
 
 const vertexSource = `struct VertexOutput {
   @builtin(position) position: vec4<f32>,

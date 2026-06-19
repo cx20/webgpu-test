@@ -17,7 +17,7 @@ import {
     onBeforeRender,
     registerScene,
     startEngine,
-} from "https://esm.sh/@babylonjs/lite@1.0.1";
+} from "https://esm.sh/@babylonjs/lite@1.2.0";
 
 async function init() {
     const canvas = document.querySelector("#c");
