@@ -107,38 +107,25 @@ class Viewer {
             app.resizeCanvas(canvasSize.width, canvasSize.height);
         });
 
-        // Setup skybox
-        let cubemapAsset = new pc.Asset('papermill', 'cubemap', {
-            url: "https://cx20.github.io/gltf-test/textures/dds/papermill.dds"
-        }, {
-            "textures": [
-                "https://cx20.github.io/gltf-test/textures/cube/skybox/px.jpg",
-                "https://cx20.github.io/gltf-test/textures/cube/skybox/nx.jpg",
-                "https://cx20.github.io/gltf-test/textures/cube/skybox/py.jpg",
-                "https://cx20.github.io/gltf-test/textures/cube/skybox/ny.jpg",
-                "https://cx20.github.io/gltf-test/textures/cube/skybox/pz.jpg",
-                "https://cx20.github.io/gltf-test/textures/cube/skybox/nz.jpg",
-            ],
-            "magFilter": 1,
-            "minFilter": 5,
-            "anisotropy": 1,
-            "name": "Papermill",
-            "prefiltered": "papermill.dds"
+        // Setup skybox / environment lighting from an HDR equirect texture.
+        // PlayCanvas 2.x: generate the skybox cubemap and the IBL env atlas at
+        // runtime via EnvLighting (the old prefiltered-DDS + cubemap-faces path
+        // mis-tags the LDR JPG faces as 'rgbp', so the skybox renders incorrectly).
+        const envAsset = new pc.Asset('papermill', 'texture', {
+            url: "https://cx20.github.io/gltf-test/textures/hdr/papermill_playcanvas_texture-tool.hdr"
         });
 
-        cubemapAsset.ready(() => {
-            app.scene.gammaCorrection = pc.GAMMA_SRGB;
-            app.scene.toneMapping = pc.TONEMAP_ACES;
-            app.scene.skyboxMip = 0;
-            for (let i = 1; i < cubemapAsset.resources.length; i++ ) {
-                cubemapAsset.resources[i].type = "rgbm";
-            }
-            app.scene.setSkybox(cubemapAsset.resources);
+        envAsset.ready(() => {
+            const env = envAsset.resource;
+            app.scene.skybox = pc.EnvLighting.generateSkyboxCubemap(env);
+            const lighting = pc.EnvLighting.generateLightingSource(env);
+            app.scene.envAtlas = pc.EnvLighting.generateAtlas(lighting);
+            lighting.destroy();
+            app.renderNextFrame = true;
         });
 
-        app.assets.add(cubemapAsset);
-        cubemapAsset.loadFaces = true;
-        app.assets.load(cubemapAsset);
+        app.assets.add(envAsset);
+        app.assets.load(envAsset);
 
         // Create camera
         const camera = new pc.Entity('Camera');
@@ -146,8 +133,11 @@ class Viewer {
             clearColor: new pc.Color(0.4, 0.45, 0.5),
             fov: 60
         });
+        // In PlayCanvas 2.x gamma/tone mapping moved from Scene to the camera component
+        camera.camera.gammaCorrection = pc.GAMMA_SRGB;
+        camera.camera.toneMapping = pc.TONEMAP_ACES;
         camera.addComponent('script');
-        const start = new pc.Vec3(0, 1, 5);
+        const start = new pc.Vec3(14, 6, -14);
         camera.setPosition(start);
         app.root.addChild(camera);
 
@@ -176,12 +166,12 @@ class Viewer {
                 case 'f': {
                     if (this.entity) {
                         const bbox = calcEntityAABB(new pc.BoundingBox(), this.entity);
-                        script.refocus(bbox.center, null, null, true);
+                        script.focus(bbox.center, true);
                     }
                     break;
                 }
                 case 'r': {
-                    script.refocus(new pc.Vec3(0, 0, 0), start, 30, true);
+                    script.reset(new pc.Vec3(0, 0, 0), start);
                     break;
                 }
             }
@@ -312,27 +302,24 @@ class Viewer {
     }
 
     play(animationName) {
-        if (this.entity && this.entity.animation) {
+        if (this.entity && this.entity.anim) {
             if (animationName) {
-                this.entity.animation.play(this.animationMap[animationName], 1);
+                this.entity.anim.baseLayer.play(this.animationMap[animationName]);
             } else {
-                this.entity.animation.playing = true;
+                this.entity.anim.playing = true;
             }
         }
     }
 
     stop() {
-        if (this.entity && this.entity.animation) {
-            this.entity.animation.playing = false;
+        if (this.entity && this.entity.anim) {
+            this.entity.anim.playing = false;
         }
     }
 
     setSpeed(speed) {
-        if (this.entity && this.entity.animation) {
-            const entity = this.entity;
-            if (entity) {
-                entity.animation.speed = speed;
-            }
+        if (this.entity && this.entity.anim) {
+            this.entity.anim.speed = speed;
         }
     }
 
@@ -344,7 +331,7 @@ class Viewer {
             this.app.renderNextFrame = true;
         }
         // or an animation is loaded and we're animating
-        if (this.entity && this.entity.animation && this.entity.animation.playing) {
+        if (this.entity && this.entity.anim && this.entity.anim.playing) {
             this.app.renderNextFrame = true;
         }
     }
@@ -395,17 +382,15 @@ class Viewer {
 
             // create animations
             if (resource.animations && resource.animations.length > 0) {
-                entity.addComponent('animation', {
-                    assets: resource.animations.map(function (asset) {
-                        return asset.id;
-                    }),
-                    speed: 1
+                entity.addComponent('anim', {
+                    activate: true
                 });
 
                 const animationMap = {};
                 for (let i = 0; i < resource.animations.length; ++i) {
-                    const animAsset = resource.animations[i];
-                    animationMap[animAsset.resource.name] = animAsset.name;
+                    const track = resource.animations[i].resource;
+                    entity.anim.assignAnimation(track.name, track);
+                    animationMap[track.name] = track.name;
                 }
 
                 this.animationMap = animationMap;
@@ -419,7 +404,7 @@ class Viewer {
             if (asset.name === "Fox.gltf") {
                 // Focus camera on loaded model
                 const bbox = calcEntityAABB(new pc.BoundingBox(), entity);
-                this.cameraScript.refocus(bbox.center, null, null, true);
+                this.cameraScript.focus(bbox.center, true);
                 this.play("Run");
             }
         }
