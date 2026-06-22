@@ -15,7 +15,7 @@ import {
     registerScene,
     startEngine,
     stopAnimation,
-} from "https://esm.sh/@babylonjs/lite@1.2.0";
+} from "@babylonjs/lite";
 
 const ENV_URL = "https://assets.babylonjs.com/core/environments/environmentSpecular.env";
 const BRDF_URL = "https://raw.githubusercontent.com/BabylonJS/Babylon-Lite/master/lab/public/brdf-lut.png";
