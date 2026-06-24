@@ -12,6 +12,7 @@ import {
     loadGltf,
     loadSkybox,
     onBeforeRender,
+    playAnimation,
     registerScene,
     startEngine,
     stopAnimation,
@@ -71,7 +72,7 @@ async function init() {
     if (foxAsset.animationGroups?.length >= 3) {
         stopAnimation(foxAsset.animationGroups[0]); // Survey
         stopAnimation(foxAsset.animationGroups[1]); // Walk
-        // animationGroups[2] = Run
+        playAnimation(foxAsset.animationGroups[2]); // Run
     }
 
     const trexRoot = trexAsset.entities[0];
