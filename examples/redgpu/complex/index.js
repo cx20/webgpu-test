@@ -56,6 +56,19 @@ RedGPU.init(
         scene.lightManager.addDirectionalLight(keyLight);
         scene.lightManager.addDirectionalLight(fillLight);
 
+        // Wheel tracks (ruts) under the truck: two thin horizontal strips along X.
+        // Ground lies on the XZ plane (normal +Y), which is what we want here.
+        const trackMaterial = new RedGPU.Material.ColorMaterial(redGPUContext, '#c5866f');
+        [-1.6, -2.35].forEach((z) => {
+            const track = new RedGPU.Display.Mesh(
+                redGPUContext,
+                new RedGPU.Primitive.Ground(redGPUContext, 100, 0.1),
+                trackMaterial
+            );
+            track.setPosition(-49.5, -2, z);
+            scene.addChild(track);
+        });
+
         for (const m of modelInfoSet) {
             new RedGPU.GLTFLoader(redGPUContext, m.url, (result) => {
                 const mesh = result.resultMesh;
@@ -63,12 +76,18 @@ RedGPU.init(
                 mesh.setPosition(m.position[0], m.position[1], m.position[2]);
                 mesh.rotationY = 90; // three.js used rotation.y = Math.PI / 2
 
-                const animations = result.parsingResult.animations;
-                if (animations && animations.length) {
+                // RedGPU's GLTFLoader auto-plays ALL clips after parsing. For the Fox
+                // that means Survey + Walk + Run play at once and fight each other, so
+                // stop everything first and play only the requested clip.
+                const animations = result.parsingResult.animations || [];
+                result.stopAnimation();
+                if (animations.length) {
                     if (m.animation === "all") {
                         animations.forEach((clip) => result.playAnimation(clip));
                     } else {
-                        result.playAnimation(animations[Math.min(m.animation, animations.length - 1)]);
+                        const clip = animations.find((a) => a.name === "Run")
+                            || animations[Math.min(m.animation, animations.length - 1)];
+                        result.playAnimation(clip);
                     }
                 }
 
