@@ -1,118 +1,43 @@
-import RedGPU from "https://redcamel.github.io/RedGPU/src/RedGPU.js";
+import * as RedGPU from "https://redcamel.github.io/RedGPU/dist/index.js";
 
-const c = document.getElementById('canvas');
+const canvas = document.getElementById('canvas');
+canvas.width = 512;
+canvas.height = 512;
 
-new RedGPU.RedGPUContext(c,
-    function () {
-        let tScene = new RedGPU.Scene();
-        tScene.backgroundColor = '#fff';
+RedGPU.init(
+    canvas,
+    (redGPUContext) => {
+        const controller = new RedGPU.Camera.OrbitController(redGPUContext);
+        controller.distance = 3;
+        controller.tilt = -20;
 
-        let tCamera = new RedGPU.ObitController(this);
-        let tView = new RedGPU.View(this, tScene, tCamera);
-        this.addView(tView);
-        tCamera.distance = 2;
+        const scene = new RedGPU.Display.Scene();
+        scene.useBackgroundColor = true;
+        scene.backgroundColor.setColorByHEX('#ffffff');
 
-        this.setSize(window.innerWidth, window.innerHeight);
+        const view = new RedGPU.Display.View3D(redGPUContext, scene, controller);
+        redGPUContext.addView(view);
 
-        // Cube data
-        //             1.0 y
-        //              ^  -1.0
-        //              | / z
-        //              |/       x
-        // -1.0 -----------------> +1.0
-        //            / |
-        //      +1.0 /  |
-        //           -1.0
-        //
-        //         [7]------[6]
-        //        / |      / |
-        //      [3]------[2] |
-        //       |  |     |  |
-        //       | [4]----|-[5]
-        //       |/       |/
-        //      [0]------[1]
-        //
-        let interleaveData = new Float32Array(
-            [
-                // Front face
-                -0.5, -0.5,  0.5,    0.0,  0.0,  1.0,   0.0, 0.0, // v0
-                 0.5, -0.5,  0.5,    0.0,  0.0,  1.0,   1.0, 0.0, // v1
-                 0.5,  0.5,  0.5,    0.0,  0.0,  1.0,   1.0, 1.0, // v2
-                -0.5,  0.5,  0.5,    0.0,  0.0,  1.0,   0.0, 1.0, // v3
-                // Back face
-                -0.5, -0.5, -0.5,    0.0,  0.0, -1.0,   1.0, 0.0, // v4
-                 0.5, -0.5, -0.5,    0.0,  0.0, -1.0,   1.0, 1.0, // v5
-                 0.5,  0.5, -0.5,    0.0,  0.0, -1.0,   0.0, 1.0, // v6
-                -0.5,  0.5, -0.5,    0.0,  0.0, -1.0,   0.0, 0.0, // v7
-                // Top face
-                 0.5,  0.5,  0.5,    0.0,  1.0,  0.0,   0.0, 1.0, // v2
-                -0.5,  0.5,  0.5,    0.0,  1.0,  0.0,   0.0, 0.0, // v3
-                -0.5,  0.5, -0.5,    0.0,  1.0,  0.0,   1.0, 0.0, // v7
-                 0.5,  0.5, -0.5,    0.0,  1.0,  0.0,   1.0, 1.0, // v6
-                // Bottom face
-                -0.5, -0.5,  0.5,    0.0,  1.5,  0.0,   1.0, 1.0, // v0
-                 0.5, -0.5,  0.5,    0.0,  1.5,  0.0,   0.0, 1.0, // v1
-                 0.5, -0.5, -0.5,    0.0,  1.5,  0.0,   0.0, 0.0, // v5
-                -0.5, -0.5, -0.5,    0.0,  1.5,  0.0,   1.0, 0.0, // v4
-                // Right face
-                 0.5, -0.5,  0.5,    1.0,  0.0,  0.0,   1.0, 0.0, // v1
-                 0.5,  0.5,  0.5,    1.0,  0.0,  0.0,   1.0, 1.0, // v2
-                 0.5,  0.5, -0.5,    1.0,  0.0,  0.0,   0.0, 1.0, // v6
-                 0.5, -0.5, -0.5,    1.0,  0.0,  0.0,   0.0, 0.0, // v5
-                // Left face
-                -0.5, -0.5,  0.5,   -1.0,  0.0,  0.0,   0.0, 0.0, // v0
-                -0.5,  0.5,  0.5,   -1.0,  0.0,  0.0,   1.0, 0.0, // v3
-                -0.5,  0.5, -0.5,   -1.0,  0.0,  0.0,   1.0, 1.0, // v7
-                -0.5, -0.5, -0.5,   -1.0,  0.0,  0.0,   0.0, 1.0  // v4
-            ]
-        );
-        let indexData = new Uint32Array(
-            [
-                0,  1,  2,    0,  2 , 3,  // Front face
-                4,  5,  6,    4,  6 , 7,  // Back face
-                8,  9, 10,    8, 10, 11,  // Top face
-                12, 13, 14,   12, 14, 15,  // Bottom face
-                16, 17, 18,   16, 18, 19,  // Right face
-                20, 21, 22,   20, 22, 23   // Left face
-            ]
-        );
+        // Box primitive already provides per-face UVs, so a BitmapMaterial maps the
+        // texture onto every face. BitmapMaterial is unlit (it outputs the sampled
+        // texture color directly), matching the original sample.
+        const geometry = new RedGPU.Primitive.Box(redGPUContext, 1, 1, 1);
 
-        let geometry = new RedGPU.Geometry(
-            this,
-            new RedGPU.Buffer(
-                this,
-                'interleaveBuffer',
-                RedGPU.Buffer.TYPE_VERTEX,
-                new Float32Array(interleaveData),
-                [
-                    new RedGPU.InterleaveInfo('vertexPosition', 'float32x3'),
-                    new RedGPU.InterleaveInfo('vertexNormal', 'float32x3'),
-                    new RedGPU.InterleaveInfo('texcoord', 'float32x2')
-                ]
-            ),
-            new RedGPU.Buffer(
-                this,
-                'indexBuffer',
-                RedGPU.Buffer.TYPE_INDEX,
-                new Uint32Array(indexData)
-            )
-        );
-        let texture = new RedGPU.BitmapTexture(this, 'https://cx20.github.io/webgpu-test/assets/textures/frog.jpg');
-        let textureMat = new RedGPU.BitmapMaterial(this, texture);
-        let tMesh = new RedGPU.Mesh(this, geometry, textureMat);
-        tMesh.cullMode = 'none';
-        tScene.addChild(tMesh);
+        const texture = new RedGPU.Resource.BitmapTexture(redGPUContext, '../../../assets/textures/frog.jpg');
+        const material = new RedGPU.Material.BitmapMaterial(redGPUContext, texture);
 
-        let renderer = new RedGPU.Render();
-        let render =  (time)=> {
-            tMesh.rotationX += 1;
-            tMesh.rotationY += 1;
-            tMesh.rotationZ += 1;
-            renderer.render(time, this);
-            requestAnimationFrame(render);
-        };
-        requestAnimationFrame(render);
+        const mesh = new RedGPU.Display.Mesh(redGPUContext, geometry, material);
+        mesh.primitiveState.cullMode = RedGPU.GPU_CULL_MODE.NONE;
+        scene.addChild(mesh);
 
-
+        const renderer = new RedGPU.Renderer(redGPUContext);
+        renderer.start(redGPUContext, () => {
+            mesh.rotationX += 0.5;
+            mesh.rotationY += 0.5;
+            mesh.rotationZ += 0.5;
+        });
+    },
+    (failReason) => {
+        console.error('Initialization failed:', failReason);
     }
-)
+);

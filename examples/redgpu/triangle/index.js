@@ -7,7 +7,7 @@ canvas.height = 512;
 RedGPU.init(
     canvas,
     (redGPUContext) => {
-        const controller = new RedGPU.Camera.ObitController(redGPUContext);
+        const controller = new RedGPU.Camera.OrbitController(redGPUContext);
         controller.distance = 5;
         controller.tilt = 0;
 
@@ -20,7 +20,10 @@ RedGPU.init(
         const material = new RedGPU.Material.ColorMaterial(redGPUContext, "#0000ff");
 
         const mesh = new RedGPU.Display.Mesh(redGPUContext, geometry, material);
-        mesh.setRotation(0, 0, 30);
+        // Circle is generated on the XZ plane (normal +Y). Stand it up to face the
+        // camera (normal +Z) with one vertex pointing up. Rotation order is Ry*Rx*Rz.
+        mesh.setRotation(0, 90, 90);
+        mesh.primitiveState.cullMode = RedGPU.GPU_CULL_MODE.NONE;
         scene.addChild(mesh);
 
         const renderer = new RedGPU.Renderer(redGPUContext);

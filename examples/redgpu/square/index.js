@@ -1,124 +1,77 @@
-import RedGPU from "https://redcamel.github.io/RedGPU/src/RedGPU.js";
+import * as RedGPU from "https://redcamel.github.io/RedGPU/dist/index.js";
 
-const c = document.getElementById('canvas');
+const canvas = document.getElementById('canvas');
+canvas.width = 512;
+canvas.height = 512;
 
-class VertexColorMaterial extends RedGPU.BaseMaterial {
-    static vertexShaderGLSL = `
-    #version 460
-    ${RedGPU.ShareGLSL.GLSL_SystemUniforms_vertex.systemUniforms}
-    ${RedGPU.ShareGLSL.GLSL_SystemUniforms_vertex.meshUniforms}
-    layout(location = 0) in vec3 position;
-    layout(location = 1) in vec4 vertexColor;
-    layout(location = 0) out vec4 vVertexColor;
-    void main() {
-        gl_Position = systemUniforms.perspectiveMTX * systemUniforms.cameraMTX * meshMatrixUniforms.modelMatrix[ int(meshUniforms.index) ] * vec4(position, 1.0);
-        vVertexColor = vertexColor;
-    }
-    `;
-    static fragmentShaderGLSL = `
-    #version 460
-    layout(location = 0) in vec4 vVertexColor;
-    layout(location = 0) out vec4 outColor;
-    layout(location = 1) out vec4 out_MouseColorID_Depth;
-    void main() {
-        outColor = vVertexColor;
-    }
-    `;
-    static PROGRAM_OPTION_LIST = {
-        vertex: [],
-        fragment: []
-    };
-    static uniformsBindGroupLayoutDescriptor_material = {
-        entries: []
-    };
-    static uniformBufferDescriptor_vertex = RedGPU.BaseMaterial.uniformBufferDescriptor_empty;
-    static uniformBufferDescriptor_fragment = RedGPU.BaseMaterial.uniformBufferDescriptor_empty;
+RedGPU.init(
+    canvas,
+    (redGPUContext) => {
+        const controller = new RedGPU.Camera.OrbitController(redGPUContext);
+        controller.distance = 5;
+        controller.tilt = 0;
 
-    constructor(redGPU) {
-        super(redGPU);
-        this.resetBindingInfo()
-    }
+        const scene = new RedGPU.Display.Scene();
+        const view = new RedGPU.Display.View3D(redGPUContext, scene, controller);
+        redGPUContext.addView(view);
 
-    resetBindingInfo() {
-        this.entries = [];
-        this._afterResetBindingInfo();
-    }
-}
-
-new RedGPU.RedGPUContext(c,
-    function () {
-        let tScene = new RedGPU.Scene();
-        tScene.backgroundColor = '#fff';
-
-        let tCamera = new RedGPU.ObitController(this);
-        let tView = new RedGPU.View(this, tScene, tCamera);
-        this.addView(tView);
-        tCamera.distance = 2;
-        tCamera.tilt = 0;
-
-        this.setSize(window.innerWidth, window.innerHeight);
-
-        // Square data
-        //             1.0 y
-        //              ^  -1.0
-        //              | / z
-        //              |/       x
-        // -1.0 -----------------> +1.0
-        //            / |
-        //      +1.0 /  |
-        //           -1.0
+        // Square data (XY plane, faces +Z toward the camera)
         //
         //        [0]------[1]
-        //         |      / |
-        //         |    /   |
-        //         |  /     |
+        //         | \      |
+        //         |   \    |
+        //         |     \  |
         //        [2]------[3]
         //
-        let interleaveData = new Float32Array(
-            [
-                // x,   y,   z,    r,   g,   b    a
-                -0.5,  0.5, 0.0,  1.0, 0.0, 0.0, 1.0, // v0
-                 0.5,  0.5, 0.0,  0.0, 1.0, 0.0, 1.0, // v1
-                -0.5, -0.5, 0.0,  0.0, 0.0, 1.0, 1.0, // v2
-                 0.5, -0.5, 0.0,  1.0, 1.0, 0.0, 1.0  // v3
-            ]
-        );
-        let indexData = new Uint32Array(
-            [
-                2, 1, 0, // v2-v1-v0
-                2, 3, 1  // v2-v3-v1
-            ]
-        );
-
-        let geometry = new RedGPU.Geometry(
-            this,
-            new RedGPU.Buffer(
-                this,
-                'interleaveBuffer',
-                RedGPU.Buffer.TYPE_VERTEX,
-                new Float32Array(interleaveData),
-                [
-                    new RedGPU.InterleaveInfo('vertexPosition', 'float32x3'),
-                    new RedGPU.InterleaveInfo('vertexColor', 'float32x4')
-                ]
-            ),
-            new RedGPU.Buffer(
-                this,
-                'indexBuffer',
-                RedGPU.Buffer.TYPE_INDEX,
-                new Uint32Array(indexData)
-            )
+        // RedGPU passes a per-vertex color (vertexColor_0) to the fragment shader
+        // only through the PBR vertex path, which is selected when the geometry's
+        // interleaved struct is labeled 'PBR'. So we build a full PBR vertex layout
+        // (position / normal / uv / uv1 / color / tangent) and feed per-vertex colors.
+        const VC = RedGPU.Resource.VertexInterleaveType;
+        const interleavedStruct = new RedGPU.Resource.VertexInterleavedStruct(
+            {
+                aVertexPosition: VC.float32x3,
+                aVertexNormal:   VC.float32x3,
+                aTexcoord:       VC.float32x2,
+                aTexcoord1:      VC.float32x2,
+                aVertexColor_0:  VC.float32x4,
+                aVertexTangent:  VC.float32x4,
+            },
+            'PBR'
         );
 
-        let colorMat = new VertexColorMaterial(this);
-        let tMesh = new RedGPU.Mesh(this, geometry, colorMat);
-        tScene.addChild(tMesh);
+        // position(x,y,z)   normal(x,y,z)  uv(u,v)  uv1(u,v)  color(r,g,b,a)   tangent(x,y,z,w)
+        const interleaveData = new Float32Array([
+            -1.0,  1.0, 0.0,   0, 0, 1,   0, 0,   0, 0,   1.0, 0.0, 0.0, 1.0,   1, 0, 0, 1, // v0 red
+             1.0,  1.0, 0.0,   0, 0, 1,   1, 0,   0, 0,   0.0, 1.0, 0.0, 1.0,   1, 0, 0, 1, // v1 green
+            -1.0, -1.0, 0.0,   0, 0, 1,   0, 1,   0, 0,   0.0, 0.0, 1.0, 1.0,   1, 0, 0, 1, // v2 blue
+             1.0, -1.0, 0.0,   0, 0, 1,   1, 1,   0, 0,   1.0, 1.0, 0.0, 1.0,   1, 0, 0, 1, // v3 yellow
+        ]);
+        const indexData = new Uint32Array([
+            2, 1, 0, // v2-v1-v0
+            2, 3, 1, // v2-v3-v1
+        ]);
 
-        let renderer = new RedGPU.Render();
-        let render = (time) => {
-            renderer.render(time, this);
-            requestAnimationFrame(render);
-        };
-        requestAnimationFrame(render);
+        const geometry = new RedGPU.Geometry(
+            redGPUContext,
+            new RedGPU.Resource.VertexBuffer(redGPUContext, interleaveData, interleavedStruct),
+            new RedGPU.Resource.IndexBuffer(redGPUContext, indexData)
+        );
+
+        // Unlit + vertex color => the fragment outputs the interpolated vertex color
+        // directly, giving a pure gradient without any lighting.
+        const material = new RedGPU.Material.PBRMaterial(redGPUContext);
+        material.useVertexColor = true;
+        material.useKHR_materials_unlit = true;
+
+        const mesh = new RedGPU.Display.Mesh(redGPUContext, geometry, material);
+        mesh.primitiveState.cullMode = RedGPU.GPU_CULL_MODE.NONE;
+        scene.addChild(mesh);
+
+        const renderer = new RedGPU.Renderer(redGPUContext);
+        renderer.start(redGPUContext, () => {});
+    },
+    (failReason) => {
+        console.error('Initialization failed:', failReason);
     }
-)
+);
