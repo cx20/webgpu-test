@@ -57,9 +57,10 @@ RedGPU.init(
         scene.lightManager.addDirectionalLight(fillLight);
 
         // Wheel tracks (ruts) under the truck: two thin horizontal strips along X.
-        // Ground lies on the XZ plane (normal +Y), which is what we want here.
+        // Ground lies on the XZ plane (normal +Y), which is what we want here. Their
+        // Z is finalised once we know the truck's real position (see the render loop).
         const trackMaterial = new RedGPU.Material.ColorMaterial(redGPUContext, '#c5866f');
-        [-1.6, -2.35].forEach((z) => {
+        const tracks = [-1.6, -2.35].map((z) => {
             const track = new RedGPU.Display.Mesh(
                 redGPUContext,
                 new RedGPU.Primitive.Ground(redGPUContext, 100, 0.1),
@@ -67,36 +68,39 @@ RedGPU.init(
             );
             track.setPosition(-49.5, -2, z);
             scene.addChild(track);
+            return track;
         });
 
-        // Sand dust kicked up by the truck's tyres: a particle emitter over each
-        // wheel track. Each particle drifts from a tight cluster near the ground up
-        // and outward while growing and fading out.
+        // Sand dust kicked up by the truck's tyres. The truck's model origin is
+        // offset from its body, so instead of guessing we spawn the dust once the
+        // truck is loaded, at its real (rendered) bounding-box position.
         const dustTexture = new RedGPU.Resource.BitmapTexture(redGPUContext, '../../../assets/textures/smokeparticle.png');
-        [-1.6, -2.35].forEach((z) => {
+        const createDustEmitter = (x, y, z) => {
             const dust = new RedGPU.Display.ParticleEmitter(redGPUContext);
             dust.material.diffuseTexture = dustTexture;
             dust.useBillboard = true;
-            dust.particleNum = 250;
+            dust.particleNum = 200;
             dust.minLife = 600;
             dust.maxLife = 1500;
             // start: tight cluster at the tyre, near the ground
-            dust.minStartX = -0.3; dust.maxStartX = 0.3;
+            dust.minStartX = -0.2; dust.maxStartX = 0.2;
             dust.minStartY = 0.0;  dust.maxStartY = 0.1;
             dust.minStartZ = -0.2; dust.maxStartZ = 0.2;
             // end: drift up and spread out
-            dust.minEndX = -1.0; dust.maxEndX = 1.0;
-            dust.minEndY = 0.6;  dust.maxEndY = 1.6;
-            dust.minEndZ = -0.6; dust.maxEndZ = 0.6;
+            dust.minEndX = -0.6; dust.maxEndX = 0.6;
+            dust.minEndY = 0.5;  dust.maxEndY = 1.3;
+            dust.minEndZ = -0.4; dust.maxEndZ = 0.4;
             // scale: small -> large (dust puff expands)
             dust.minStartScale = 0.1; dust.maxStartScale = 0.3;
-            dust.minEndScale = 0.7;   dust.maxEndScale = 1.1;
+            dust.minEndScale = 0.6;   dust.maxEndScale = 1.0;
             // alpha: faint -> fully transparent
             dust.minStartAlpha = 0.4; dust.maxStartAlpha = 0.7;
             dust.minEndAlpha = 0.0;   dust.maxEndAlpha = 0.0;
-            dust.setPosition(0, -2, z);
+            dust.setPosition(x, y, z);
             scene.addChild(dust);
-        });
+        };
+
+        let truckMesh = null;
 
         for (const m of modelInfoSet) {
             new RedGPU.GLTFLoader(redGPUContext, m.url, (result) => {
@@ -104,6 +108,7 @@ RedGPU.init(
                 mesh.setScale(m.scale, m.scale, m.scale);
                 mesh.setPosition(m.position[0], m.position[1], m.position[2]);
                 mesh.rotationY = 90; // three.js used rotation.y = Math.PI / 2
+                if (m.name === "CesiumMilkTruck") truckMesh = mesh;
 
                 // RedGPU's GLTFLoader auto-plays ALL clips after parsing. For the Fox
                 // that means Survey + Walk + Run play at once and fight each other, so
@@ -124,10 +129,26 @@ RedGPU.init(
             });
         }
 
+        let dustSpawned = false;
         const renderer = new RedGPU.Renderer(redGPUContext);
         renderer.start(redGPUContext, () => {
             // Auto-rotate the camera around the scene (three.js used controls.autoRotate).
             controller.pan += 0.2;
+
+            // Once the truck has been rendered (so its world AABB is valid), align the
+            // wheel tracks and dust to its actual tyre positions: bottom of the box,
+            // on each side.
+            if (truckMesh && !dustSpawned) {
+                const aabb = truckMesh.combinedBoundingAABB;
+                if (aabb && Number.isFinite(aabb.centerX) && aabb.xSize > 0) {
+                    const dz = aabb.zSize * 0.35;
+                    tracks[0].setPosition(-49.5, -2, aabb.centerZ - dz);
+                    tracks[1].setPosition(-49.5, -2, aabb.centerZ + dz);
+                    createDustEmitter(aabb.centerX, aabb.minY, aabb.centerZ - dz);
+                    createDustEmitter(aabb.centerX, aabb.minY, aabb.centerZ + dz);
+                    dustSpawned = true;
+                }
+            }
         });
     },
     (failReason) => {
