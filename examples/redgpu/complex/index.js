@@ -69,6 +69,35 @@ RedGPU.init(
             scene.addChild(track);
         });
 
+        // Sand dust kicked up by the truck's tyres: a particle emitter over each
+        // wheel track. Each particle drifts from a tight cluster near the ground up
+        // and outward while growing and fading out.
+        const dustTexture = new RedGPU.Resource.BitmapTexture(redGPUContext, '../../../assets/textures/smokeparticle.png');
+        [-1.6, -2.35].forEach((z) => {
+            const dust = new RedGPU.Display.ParticleEmitter(redGPUContext);
+            dust.material.diffuseTexture = dustTexture;
+            dust.useBillboard = true;
+            dust.particleNum = 250;
+            dust.minLife = 600;
+            dust.maxLife = 1500;
+            // start: tight cluster at the tyre, near the ground
+            dust.minStartX = -0.3; dust.maxStartX = 0.3;
+            dust.minStartY = 0.0;  dust.maxStartY = 0.1;
+            dust.minStartZ = -0.2; dust.maxStartZ = 0.2;
+            // end: drift up and spread out
+            dust.minEndX = -1.0; dust.maxEndX = 1.0;
+            dust.minEndY = 0.6;  dust.maxEndY = 1.6;
+            dust.minEndZ = -0.6; dust.maxEndZ = 0.6;
+            // scale: small -> large (dust puff expands)
+            dust.minStartScale = 0.1; dust.maxStartScale = 0.3;
+            dust.minEndScale = 0.7;   dust.maxEndScale = 1.1;
+            // alpha: faint -> fully transparent
+            dust.minStartAlpha = 0.4; dust.maxStartAlpha = 0.7;
+            dust.minEndAlpha = 0.0;   dust.maxEndAlpha = 0.0;
+            dust.setPosition(0, -2, z);
+            scene.addChild(dust);
+        });
+
         for (const m of modelInfoSet) {
             new RedGPU.GLTFLoader(redGPUContext, m.url, (result) => {
                 const mesh = result.resultMesh;
