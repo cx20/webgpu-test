@@ -70,11 +70,14 @@ RedGPU.init(
             scene.addChild(track);
         });
 
-        // Sand dust kicked up by the truck's tyres. The truck's model origin is
-        // offset from its body, so instead of guessing we spawn the dust once the
-        // truck is loaded, at its real (rendered) bounding-box position.
+        // Sand dust kicked up by the truck's tyres. A ParticleEmitter emits particles
+        // in world space using (range + currentPosition), where currentPosition is
+        // localToWorld(x, y, z) of the emitter itself - i.e. setPosition is applied
+        // twice (the matrix translation AND the point), doubling the location. So the
+        // emitter is left at the origin and the wheel world position is baked directly
+        // into the start/end ranges instead. (wx, gy, wz) = the wheel world position.
         const dustTexture = new RedGPU.Resource.BitmapTexture(redGPUContext, '../../../assets/textures/smokeparticle.png');
-        const createDustEmitter = (x, y, z) => {
+        const createDustEmitter = (wx, gy, wz) => {
             const dust = new RedGPU.Display.ParticleEmitter(redGPUContext);
             dust.material.diffuseTexture = dustTexture;
             dust.useBillboard = true;
@@ -82,20 +85,19 @@ RedGPU.init(
             dust.minLife = 600;
             dust.maxLife = 1500;
             // start: tight cluster at the tyre, near the ground
-            dust.minStartX = -0.2; dust.maxStartX = 0.2;
-            dust.minStartY = 0.0;  dust.maxStartY = 0.1;
-            dust.minStartZ = -0.2; dust.maxStartZ = 0.2;
+            dust.minStartX = wx - 0.2; dust.maxStartX = wx + 0.2;
+            dust.minStartY = gy;       dust.maxStartY = gy + 0.1;
+            dust.minStartZ = wz - 0.2; dust.maxStartZ = wz + 0.2;
             // end: drift up and spread out
-            dust.minEndX = -0.6; dust.maxEndX = 0.6;
-            dust.minEndY = 0.5;  dust.maxEndY = 1.3;
-            dust.minEndZ = -0.4; dust.maxEndZ = 0.4;
+            dust.minEndX = wx - 0.6;   dust.maxEndX = wx + 0.6;
+            dust.minEndY = gy + 0.5;   dust.maxEndY = gy + 1.3;
+            dust.minEndZ = wz - 0.4;   dust.maxEndZ = wz + 0.4;
             // scale: small -> large (dust puff expands)
             dust.minStartScale = 0.1; dust.maxStartScale = 0.3;
             dust.minEndScale = 0.6;   dust.maxEndScale = 1.0;
             // alpha: faint -> fully transparent
             dust.minStartAlpha = 0.4; dust.maxStartAlpha = 0.7;
             dust.minEndAlpha = 0.0;   dust.maxEndAlpha = 0.0;
-            dust.setPosition(x, y, z);
             scene.addChild(dust);
         };
 
@@ -147,12 +149,12 @@ RedGPU.init(
                     const aabb = truckMesh.combinedBoundingAABB;
                     if (aabb && Number.isFinite(aabb.centerX) && aabb.xSize > 0) {
                         // One emitter per wheel (front/back x left/right), mirroring the
-                        // Babylon.js sample. Babylon hard-codes the 4 wheels at x = -0.8 /
-                        // 0.3 (back/front) around the wheelbase centre (~ -0.25), i.e. the
-                        // truck centre +/- 0.55. Use the real centre X so it stays correct
-                        // regardless of the model's origin offset / rotation handedness.
+                        // Babylon.js sample. Babylon hard-codes the 4 wheels around the
+                        // wheelbase centre +/- 0.55 in X; use the truck's real world centre
+                        // X (robust to the model's origin offset / rotation handedness) and
+                        // its bottom (minY) as the ground, with Z on the two tracks.
                         const wheelX = [aabb.centerX - 0.55, aabb.centerX + 0.55];
-                        wheelX.forEach((x) => trackZ.forEach((z) => createDustEmitter(x, -2, z)));
+                        wheelX.forEach((wx) => trackZ.forEach((wz) => createDustEmitter(wx, aabb.minY, wz)));
                         dustSpawned = true;
                     }
                 }
