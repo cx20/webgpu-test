@@ -82,19 +82,19 @@ RedGPU.init(
             dust.material.diffuseTexture = dustTexture;
             dust.useBillboard = true;
             dust.particleNum = 120;
-            dust.minLife = 600;
-            dust.maxLife = 1500;
-            // start: tight cluster at the tyre, near the ground
-            dust.minStartX = wx - 0.2; dust.maxStartX = wx + 0.2;
-            dust.minStartY = gy;       dust.maxStartY = gy + 0.1;
-            dust.minStartZ = wz - 0.2; dust.maxStartZ = wz + 0.2;
-            // end: drift up and spread out
-            dust.minEndX = wx - 0.6;   dust.maxEndX = wx + 0.6;
-            dust.minEndY = gy + 0.5;   dust.maxEndY = gy + 1.3;
-            dust.minEndZ = wz - 0.4;   dust.maxEndZ = wz + 0.4;
-            // scale: small -> large (dust puff expands)
-            dust.minStartScale = 0.1; dust.maxStartScale = 0.3;
-            dust.minEndScale = 0.6;   dust.maxEndScale = 1.0;
+            dust.minLife = 500;
+            dust.maxLife = 1100;
+            // start: tight cluster right at the tyre, on the ground
+            dust.minStartX = wx - 0.1; dust.maxStartX = wx + 0.1;
+            dust.minStartY = gy;       dust.maxStartY = gy + 0.05;
+            dust.minStartZ = wz - 0.1; dust.maxStartZ = wz + 0.1;
+            // end: a small puff that stays close to the tyre
+            dust.minEndX = wx - 0.25;  dust.maxEndX = wx + 0.25;
+            dust.minEndY = gy + 0.15;  dust.maxEndY = gy + 0.45;
+            dust.minEndZ = wz - 0.2;   dust.maxEndZ = wz + 0.2;
+            // scale: small -> moderate (kept small so it doesn't cover the body)
+            dust.minStartScale = 0.08; dust.maxStartScale = 0.16;
+            dust.minEndScale = 0.3;    dust.maxEndScale = 0.5;
             // alpha: faint -> fully transparent
             dust.minStartAlpha = 0.4; dust.maxStartAlpha = 0.7;
             dust.minEndAlpha = 0.0;   dust.maxEndAlpha = 0.0;
