@@ -129,20 +129,26 @@ RedGPU.init(
         }
 
         let dustSpawned = false;
+        let truckRenderedFrames = 0;
         const renderer = new RedGPU.Renderer(redGPUContext);
         renderer.start(redGPUContext, () => {
             // Auto-rotate the camera around the scene (three.js used controls.autoRotate).
             controller.pan += 0.2;
 
-            // Once the truck has been rendered (so its world AABB is valid), spawn the
-            // dust. The truck sits on z = -1.6 / -2.35 (the tracks line up), so only its
-            // X needs correcting: its model origin is offset, so use the real world
-            // centre X from the bounding box instead of the nominal 0.
+            // Spawn the dust once the truck has actually been rendered for a few frames.
+            // combinedBoundingAABB is world-space (it uses the model matrix), and that
+            // matrix is only valid after the truck has been drawn at least once - reading
+            // it too early returns the untransformed (local) box and a wrong centre.
+            // The truck sits on z = -1.6 / -2.35 (the tracks line up), so only its X
+            // needs correcting from the nominal 0 to its real world-centre X.
             if (truckMesh && !dustSpawned) {
-                const aabb = truckMesh.combinedBoundingAABB;
-                if (aabb && Number.isFinite(aabb.centerX) && aabb.xSize > 0) {
-                    trackZ.forEach((z) => createDustEmitter(aabb.centerX, -2, z));
-                    dustSpawned = true;
+                truckRenderedFrames++;
+                if (truckRenderedFrames > 3) {
+                    const aabb = truckMesh.combinedBoundingAABB;
+                    if (aabb && Number.isFinite(aabb.centerX) && aabb.xSize > 0) {
+                        trackZ.forEach((z) => createDustEmitter(aabb.centerX, -2, z));
+                        dustSpawned = true;
+                    }
                 }
             }
         });
