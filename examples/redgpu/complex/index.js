@@ -57,10 +57,10 @@ RedGPU.init(
         scene.lightManager.addDirectionalLight(fillLight);
 
         // Wheel tracks (ruts) under the truck: two thin horizontal strips along X.
-        // Ground lies on the XZ plane (normal +Y), which is what we want here. Their
-        // Z is finalised once we know the truck's real position (see the render loop).
+        // Ground lies on the XZ plane (normal +Y), which is what we want here.
         const trackMaterial = new RedGPU.Material.ColorMaterial(redGPUContext, '#c5866f');
-        const tracks = [-1.6, -2.35].map((z) => {
+        const trackZ = [-1.6, -2.35];
+        trackZ.forEach((z) => {
             const track = new RedGPU.Display.Mesh(
                 redGPUContext,
                 new RedGPU.Primitive.Ground(redGPUContext, 100, 0.1),
@@ -68,7 +68,6 @@ RedGPU.init(
             );
             track.setPosition(-49.5, -2, z);
             scene.addChild(track);
-            return track;
         });
 
         // Sand dust kicked up by the truck's tyres. The truck's model origin is
@@ -135,17 +134,14 @@ RedGPU.init(
             // Auto-rotate the camera around the scene (three.js used controls.autoRotate).
             controller.pan += 0.2;
 
-            // Once the truck has been rendered (so its world AABB is valid), align the
-            // wheel tracks and dust to its actual tyre positions: bottom of the box,
-            // on each side.
+            // Once the truck has been rendered (so its world AABB is valid), spawn the
+            // dust. The truck sits on z = -1.6 / -2.35 (the tracks line up), so only its
+            // X needs correcting: its model origin is offset, so use the real world
+            // centre X from the bounding box instead of the nominal 0.
             if (truckMesh && !dustSpawned) {
                 const aabb = truckMesh.combinedBoundingAABB;
                 if (aabb && Number.isFinite(aabb.centerX) && aabb.xSize > 0) {
-                    const dz = aabb.zSize * 0.35;
-                    tracks[0].setPosition(-49.5, -2, aabb.centerZ - dz);
-                    tracks[1].setPosition(-49.5, -2, aabb.centerZ + dz);
-                    createDustEmitter(aabb.centerX, aabb.minY, aabb.centerZ - dz);
-                    createDustEmitter(aabb.centerX, aabb.minY, aabb.centerZ + dz);
+                    trackZ.forEach((z) => createDustEmitter(aabb.centerX, -2, z));
                     dustSpawned = true;
                 }
             }
