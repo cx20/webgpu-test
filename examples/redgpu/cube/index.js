@@ -1,161 +1,107 @@
-import RedGPU from "https://redcamel.github.io/RedGPU/src/RedGPU.js";
+import * as RedGPU from "https://redcamel.github.io/RedGPU/dist/index.js";
 
-const c = document.getElementById('canvas');
+const canvas = document.getElementById('canvas');
+canvas.width = 512;
+canvas.height = 512;
 
-class VertexColorMaterial extends RedGPU.BaseMaterial {
-    static vertexShaderGLSL = `
-    #version 460
-    ${RedGPU.ShareGLSL.GLSL_SystemUniforms_vertex.systemUniforms}
-    ${RedGPU.ShareGLSL.GLSL_SystemUniforms_vertex.meshUniforms}
-    layout(location = 0) in vec3 position;
-    layout(location = 1) in vec4 vertexColor;
-    layout(location = 0) out vec4 vVertexColor;
-    void main() {
-        gl_Position = systemUniforms.perspectiveMTX * systemUniforms.cameraMTX * meshMatrixUniforms.modelMatrix[ int(meshUniforms.index) ] * vec4(position, 1.0);
-        vVertexColor = vertexColor;
-    }
-    `;
-    static fragmentShaderGLSL = `
-    #version 460
-    layout(location = 0) in vec4 vVertexColor;
-    layout(location = 0) out vec4 outColor;
-    layout(location = 1) out vec4 out_MouseColorID_Depth;
-    void main() {
-        outColor = vVertexColor;
-    }
-    `;
-    static PROGRAM_OPTION_LIST = {
-        vertex: [],
-        fragment: []
-    };
-    static uniformsBindGroupLayoutDescriptor_material = {
-        entries: []
-    };
-    static uniformBufferDescriptor_vertex = RedGPU.BaseMaterial.uniformBufferDescriptor_empty;
-    static uniformBufferDescriptor_fragment = RedGPU.BaseMaterial.uniformBufferDescriptor_empty;
+RedGPU.init(
+    canvas,
+    (redGPUContext) => {
+        const controller = new RedGPU.Camera.OrbitController(redGPUContext);
+        controller.distance = 3;
+        controller.tilt = -20;
 
-    constructor(redGPU) {
-        super(redGPU);
-        this.resetBindingInfo()
-    }
+        const scene = new RedGPU.Display.Scene();
+        scene.useBackgroundColor = true;
+        scene.backgroundColor.setColorByHEX('#ffffff');
 
-    resetBindingInfo() {
-        this.entries = [];
-        this._afterResetBindingInfo();
-    }
-}
+        const view = new RedGPU.Display.View3D(redGPUContext, scene, controller);
+        redGPUContext.addView(view);
 
-new RedGPU.RedGPUContext(c,
-    function () {
-        let tScene = new RedGPU.Scene();
-        tScene.backgroundColor = '#fff';
-
-        let tCamera = new RedGPU.ObitController(this);
-        let tView = new RedGPU.View(this, tScene, tCamera);
-        this.addView(tView);
-        tCamera.distance = 2;
-        tCamera.tilt = 0;
-
-        this.setSize(window.innerWidth, window.innerHeight);
-
-        // Cube data
-        //             1.0 y 
-        //              ^  -1.0 
-        //              | / z
-        //              |/       x
-        // -1.0 -----------------> +1.0
-        //            / |
-        //      +1.0 /  |
-        //           -1.0
-        // 
-        //         [7]------[6]
-        //        / |      / |
-        //      [3]------[2] |
-        //       |  |     |  |
-        //       | [4]----|-[5]
-        //       |/       |/
-        //      [0]------[1]
-        //
-        let interleaveData = new Float32Array(
-            [
-                // x,   y,   z,    r,   g,   b,  a
-
-                // Front face
-                -0.5, -0.5,  0.5,  1.0, 0.0, 0.0, 1.0, // v0
-                 0.5, -0.5,  0.5,  1.0, 0.0, 0.0, 1.0, // v1
-                 0.5,  0.5,  0.5,  1.0, 0.0, 0.0, 1.0, // v2
-                -0.5,  0.5,  0.5,  1.0, 0.0, 0.0, 1.0, // v3
-                // Back face
-                -0.5, -0.5, -0.5,  1.0, 1.0, 0.0, 1.0, // v4
-                 0.5, -0.5, -0.5,  1.0, 1.0, 0.0, 1.0, // v5
-                 0.5,  0.5, -0.5,  1.0, 1.0, 0.0, 1.0, // v6
-                -0.5,  0.5, -0.5,  1.0, 1.0, 0.0, 1.0, // v7
-                // Top face
-                 0.5,  0.5,  0.5,  0.0, 1.0, 0.0, 1.0, // v2
-                -0.5,  0.5,  0.5,  0.0, 1.0, 0.0, 1.0, // v3
-                -0.5,  0.5, -0.5,  0.0, 1.0, 0.0, 1.0, // v7
-                 0.5,  0.5, -0.5,  0.0, 1.0, 0.0, 1.0, // v6
-                // Bottom face
-                -0.5, -0.5,  0.5,  1.0, 0.5, 0.5, 1.0, // v0
-                 0.5, -0.5,  0.5,  1.0, 0.5, 0.5, 1.0, // v1
-                 0.5, -0.5, -0.5,  1.0, 0.5, 0.5, 1.0, // v5
-                -0.5, -0.5, -0.5,  1.0, 0.5, 0.5, 1.0, // v4
-                 // Right face
-                 0.5, -0.5,  0.5,  1.0, 0.0, 1.0, 1.0, // v1
-                 0.5,  0.5,  0.5,  1.0, 0.0, 1.0, 1.0, // v2
-                 0.5,  0.5, -0.5,  1.0, 0.0, 1.0, 1.0, // v6
-                 0.5, -0.5, -0.5,  1.0, 0.0, 1.0, 1.0, // v5
-                 // Left face
-                -0.5, -0.5,  0.5,  0.0, 0.0, 1.0, 1.0, // v0
-                -0.5,  0.5,  0.5,  0.0, 0.0, 1.0, 1.0, // v3
-                -0.5,  0.5, -0.5,  0.0, 0.0, 1.0, 1.0, // v7
-                -0.5, -0.5, -0.5,  0.0, 0.0, 1.0, 1.0  // v4
-            ]
-        );
-        let indexData = new Uint32Array(
-            [
-                 0,  1,  2,    0,  2 , 3,  // Front face
-                 4,  5,  6,    4,  6 , 7,  // Back face
-                 8,  9, 10,    8, 10, 11,  // Top face
-                12, 13, 14,   12, 14, 15,  // Bottom face
-                16, 17, 18,   16, 18, 19,  // Right face
-                20, 21, 22,   20, 22, 23   // Left face
-            ]
+        // RedGPU delivers a per-vertex color (vertexColor_0) to the fragment shader
+        // only through the PBR vertex path, which is selected when the geometry's
+        // interleaved struct is labeled 'PBR'. So we build a full PBR vertex layout
+        // (position / normal / uv / uv1 / color / tangent) and assign one color per face.
+        const VC = RedGPU.Resource.VertexInterleaveType;
+        const interleavedStruct = new RedGPU.Resource.VertexInterleavedStruct(
+            {
+                aVertexPosition: VC.float32x3,
+                aVertexNormal:   VC.float32x3,
+                aTexcoord:       VC.float32x2,
+                aTexcoord1:      VC.float32x2,
+                aVertexColor_0:  VC.float32x4,
+                aVertexTangent:  VC.float32x4,
+            },
+            'PBR'
         );
 
-        let geometry = new RedGPU.Geometry(
-            this,
-            new RedGPU.Buffer(
-                this,
-                'interleaveBuffer',
-                RedGPU.Buffer.TYPE_VERTEX,
-                new Float32Array(interleaveData),
-                [
-                    new RedGPU.InterleaveInfo('vertexPosition', 'float32x3'),
-                    new RedGPU.InterleaveInfo('vertexColor', 'float32x4')
-                ]
-            ),
-            new RedGPU.Buffer(
-                this,
-                'indexBuffer',
-                RedGPU.Buffer.TYPE_INDEX,
-                new Uint32Array(indexData)
-            )
+        // 24 vertices (6 faces x 4), one color per face.
+        // position(x,y,z)   normal(x,y,z)   uv   uv1   color(r,g,b,a)        tangent
+        const interleaveData = new Float32Array([
+            // Front face (red)
+            -0.5, -0.5,  0.5,   0, 0, 1,   0, 0,  0, 0,   1.0, 0.0, 0.0, 1.0,   1, 0, 0, 1,
+             0.5, -0.5,  0.5,   0, 0, 1,   0, 0,  0, 0,   1.0, 0.0, 0.0, 1.0,   1, 0, 0, 1,
+             0.5,  0.5,  0.5,   0, 0, 1,   0, 0,  0, 0,   1.0, 0.0, 0.0, 1.0,   1, 0, 0, 1,
+            -0.5,  0.5,  0.5,   0, 0, 1,   0, 0,  0, 0,   1.0, 0.0, 0.0, 1.0,   1, 0, 0, 1,
+            // Back face (yellow)
+            -0.5, -0.5, -0.5,   0, 0,-1,   0, 0,  0, 0,   1.0, 1.0, 0.0, 1.0,   1, 0, 0, 1,
+             0.5, -0.5, -0.5,   0, 0,-1,   0, 0,  0, 0,   1.0, 1.0, 0.0, 1.0,   1, 0, 0, 1,
+             0.5,  0.5, -0.5,   0, 0,-1,   0, 0,  0, 0,   1.0, 1.0, 0.0, 1.0,   1, 0, 0, 1,
+            -0.5,  0.5, -0.5,   0, 0,-1,   0, 0,  0, 0,   1.0, 1.0, 0.0, 1.0,   1, 0, 0, 1,
+            // Top face (green)
+             0.5,  0.5,  0.5,   0, 1, 0,   0, 0,  0, 0,   0.0, 1.0, 0.0, 1.0,   1, 0, 0, 1,
+            -0.5,  0.5,  0.5,   0, 1, 0,   0, 0,  0, 0,   0.0, 1.0, 0.0, 1.0,   1, 0, 0, 1,
+            -0.5,  0.5, -0.5,   0, 1, 0,   0, 0,  0, 0,   0.0, 1.0, 0.0, 1.0,   1, 0, 0, 1,
+             0.5,  0.5, -0.5,   0, 1, 0,   0, 0,  0, 0,   0.0, 1.0, 0.0, 1.0,   1, 0, 0, 1,
+            // Bottom face (pink)
+            -0.5, -0.5,  0.5,   0,-1, 0,   0, 0,  0, 0,   1.0, 0.5, 0.5, 1.0,   1, 0, 0, 1,
+             0.5, -0.5,  0.5,   0,-1, 0,   0, 0,  0, 0,   1.0, 0.5, 0.5, 1.0,   1, 0, 0, 1,
+             0.5, -0.5, -0.5,   0,-1, 0,   0, 0,  0, 0,   1.0, 0.5, 0.5, 1.0,   1, 0, 0, 1,
+            -0.5, -0.5, -0.5,   0,-1, 0,   0, 0,  0, 0,   1.0, 0.5, 0.5, 1.0,   1, 0, 0, 1,
+            // Right face (magenta)
+             0.5, -0.5,  0.5,   1, 0, 0,   0, 0,  0, 0,   1.0, 0.0, 1.0, 1.0,   1, 0, 0, 1,
+             0.5,  0.5,  0.5,   1, 0, 0,   0, 0,  0, 0,   1.0, 0.0, 1.0, 1.0,   1, 0, 0, 1,
+             0.5,  0.5, -0.5,   1, 0, 0,   0, 0,  0, 0,   1.0, 0.0, 1.0, 1.0,   1, 0, 0, 1,
+             0.5, -0.5, -0.5,   1, 0, 0,   0, 0,  0, 0,   1.0, 0.0, 1.0, 1.0,   1, 0, 0, 1,
+            // Left face (blue)
+            -0.5, -0.5,  0.5,  -1, 0, 0,   0, 0,  0, 0,   0.0, 0.0, 1.0, 1.0,   1, 0, 0, 1,
+            -0.5,  0.5,  0.5,  -1, 0, 0,   0, 0,  0, 0,   0.0, 0.0, 1.0, 1.0,   1, 0, 0, 1,
+            -0.5,  0.5, -0.5,  -1, 0, 0,   0, 0,  0, 0,   0.0, 0.0, 1.0, 1.0,   1, 0, 0, 1,
+            -0.5, -0.5, -0.5,  -1, 0, 0,   0, 0,  0, 0,   0.0, 0.0, 1.0, 1.0,   1, 0, 0, 1,
+        ]);
+        const indexData = new Uint32Array([
+             0,  1,  2,    0,  2,  3, // Front
+             4,  5,  6,    4,  6,  7, // Back
+             8,  9, 10,    8, 10, 11, // Top
+            12, 13, 14,   12, 14, 15, // Bottom
+            16, 17, 18,   16, 18, 19, // Right
+            20, 21, 22,   20, 22, 23, // Left
+        ]);
+
+        const geometry = new RedGPU.Geometry(
+            redGPUContext,
+            new RedGPU.Resource.VertexBuffer(redGPUContext, interleaveData, interleavedStruct),
+            new RedGPU.Resource.IndexBuffer(redGPUContext, indexData)
         );
 
-        let colorMat = new VertexColorMaterial(this);
-        let tMesh = new RedGPU.Mesh(this, geometry, colorMat);
-        tMesh.cullMode = 'none';
-        tScene.addChild(tMesh);
+        // Unlit + vertex color => the fragment outputs the interpolated vertex color
+        // directly, so each face shows its assigned solid color without lighting.
+        const material = new RedGPU.Material.PBRMaterial(redGPUContext);
+        material.useVertexColor = true;
+        material.useKHR_materials_unlit = true;
 
-        let renderer = new RedGPU.Render();
-        let render = (time) => {
-            tMesh.rotationX += 1;
-            tMesh.rotationY += 1;
-            tMesh.rotationZ += 1;
-            renderer.render(time, this);
-            requestAnimationFrame(render);
-        };
-        requestAnimationFrame(render);
+        const mesh = new RedGPU.Display.Mesh(redGPUContext, geometry, material);
+        mesh.primitiveState.cullMode = RedGPU.GPU_CULL_MODE.NONE;
+        scene.addChild(mesh);
+
+        const renderer = new RedGPU.Renderer(redGPUContext);
+        renderer.start(redGPUContext, () => {
+            mesh.rotationX += 0.5;
+            mesh.rotationY += 0.5;
+            mesh.rotationZ += 0.5;
+        });
+    },
+    (failReason) => {
+        console.error('Initialization failed:', failReason);
     }
-)
+);
