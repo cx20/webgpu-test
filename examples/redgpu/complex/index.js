@@ -78,7 +78,7 @@ RedGPU.init(
             const dust = new RedGPU.Display.ParticleEmitter(redGPUContext);
             dust.material.diffuseTexture = dustTexture;
             dust.useBillboard = true;
-            dust.particleNum = 200;
+            dust.particleNum = 120;
             dust.minLife = 600;
             dust.maxLife = 1500;
             // start: tight cluster at the tyre, near the ground
@@ -146,7 +146,13 @@ RedGPU.init(
                 if (truckRenderedFrames > 3) {
                     const aabb = truckMesh.combinedBoundingAABB;
                     if (aabb && Number.isFinite(aabb.centerX) && aabb.xSize > 0) {
-                        trackZ.forEach((z) => createDustEmitter(aabb.centerX, -2, z));
+                        // One emitter per wheel (front/back x left/right), mirroring the
+                        // Babylon.js sample. Babylon hard-codes the 4 wheels at x = -0.8 /
+                        // 0.3 (back/front) around the wheelbase centre (~ -0.25), i.e. the
+                        // truck centre +/- 0.55. Use the real centre X so it stays correct
+                        // regardless of the model's origin offset / rotation handedness.
+                        const wheelX = [aabb.centerX - 0.55, aabb.centerX + 0.55];
+                        wheelX.forEach((x) => trackZ.forEach((z) => createDustEmitter(x, -2, z)));
                         dustSpawned = true;
                     }
                 }
