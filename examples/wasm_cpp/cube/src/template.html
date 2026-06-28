@@ -1,0 +1,44 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>Hello, World!</title>
+		<link rel="stylesheet" type="text/css" href="style.css">
+	</head>
+<body>
+<canvas id="c" width="640" height="480"></canvas>
+<script>
+let c = document.getElementById('c');
+c.width = window.innerWidth;
+c.height = window.innerHeight;
+#if !MODULARIZE
+  var Module = {
+#if USE_PTHREADS
+    worker: '{{{ PTHREAD_WORKER_FILE }}}'
+#endif
+};
+#endif
+
+#if WASM == 2
+  var supportsWasm = window.WebAssembly;
+#endif
+
+// Depending on the build flags that one uses, different files need to be downloaded
+// to load the compiled page. The right set of files will be expanded to be downloaded
+// via the directive below.
+{{{ DOWNLOAD_JS_AND_WASM_FILES }}}
+
+#if SINGLE_FILE
+// If we are doing a SINGLE_FILE=1 build, inlined JS runtime code follows here:
+{{{ JS_CONTENTS_IN_SINGLE_FILE_BUILD }}}
+
+#if MODULARIZE
+// Launch the MODULARIZEd build.
+{{{ EXPORT_NAME }}}({});
+#endif
+
+#endif
+
+</script>
+</body>
+</html>

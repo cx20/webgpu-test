@@ -4,6 +4,7 @@
 #include <string.h>
 #include <webgpu/webgpu.h>
 #include <emscripten/html5.h>
+#include <emscripten/em_js.h>
 
 namespace window {
 	typedef struct HandleImpl* Handle;
@@ -55,7 +56,28 @@ WGPURenderPipeline pipeline;
 WGPUBuffer vertexBuffer; // vertex buffer with position
 WGPUBuffer colorBuffer;  // vertex buffer with colours
 
-void webgpu::createSurface(WGPUDevice device) {
+// Query the current drawing-buffer size (the full browser window).
+EM_JS(int, canvas_get_width,  (), { return window.innerWidth;  });
+EM_JS(int, canvas_get_height, (), { return window.innerHeight; });
+
+uint32_t curW = 0;
+uint32_t curH = 0;
+
+void configureSurface(uint32_t w, uint32_t h) {
+	WGPUSurfaceConfiguration config = {};
+	config.device      = device;
+	config.format      = surfaceFormat;
+	config.usage       = WGPUTextureUsage_RenderAttachment;
+	config.width       = w;
+	config.height      = h;
+	config.alphaMode   = WGPUCompositeAlphaMode_Auto;
+	config.presentMode = WGPUPresentMode_Fifo;
+	wgpuSurfaceConfigure(surface, &config);
+	curW = w;
+	curH = h;
+}
+
+void webgpu::createSurface(WGPUDevice /*device*/) {
 	WGPUEmscriptenSurfaceSourceCanvasHTMLSelector canvasDesc = {};
 	canvasDesc.chain.sType = WGPUSType_EmscriptenSurfaceSourceCanvasHTMLSelector;
 	canvasDesc.selector = { "canvas", WGPU_STRLEN };
@@ -65,16 +87,7 @@ void webgpu::createSurface(WGPUDevice device) {
 
 	surface = wgpuInstanceCreateSurface(instance, &surfDesc);
 
-	WGPUSurfaceConfiguration config = {};
-	config.device      = device;
-	config.format      = surfaceFormat;
-	config.usage       = WGPUTextureUsage_RenderAttachment;
-	config.width       = 640;
-	config.height      = 480;
-	config.alphaMode   = WGPUCompositeAlphaMode_Auto;
-	config.presentMode = WGPUPresentMode_Fifo;
-
-	wgpuSurfaceConfigure(surface, &config);
+	configureSurface((uint32_t)canvas_get_width(), (uint32_t)canvas_get_height());
 }
 
 WGPUTextureFormat webgpu::getSurfaceFormat() {
@@ -223,6 +236,13 @@ void createPipelineAndBuffers() {
 }
 
 bool redraw() {
+	// Follow the browser window size (reconfigure the surface on resize).
+	uint32_t w = (uint32_t)canvas_get_width();
+	uint32_t h = (uint32_t)canvas_get_height();
+	if (w != curW || h != curH) {
+		configureSurface(w, h);
+	}
+
 	WGPUSurfaceTexture surfaceTexture;
 	wgpuSurfaceGetCurrentTexture(surface, &surfaceTexture);								// acquire the current texture
 	WGPUTextureView backBufView = wgpuTextureCreateView(surfaceTexture.texture, nullptr);	// create textureView
