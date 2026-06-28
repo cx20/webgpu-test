@@ -6,7 +6,7 @@ emcc ^
     -std=c++11 ^
    -O3 ^
    -s MINIMAL_RUNTIME=2 ^
-   -s USE_WEBGPU=1 ^
+   --use-port=emdawnwebgpu ^
    -s WASM=1 ^
    --shell-file src/template.html ^
    src/glue.cpp ^
@@ -35,6 +35,8 @@ Result:
 
 Caution:
 
-> Use Emscripten 3.1.3 or higher to compile.
+> Use Emscripten 4.0.10 or higher to compile (the built-in `emdawnwebgpu` port).
 > 
-> These samples run in [Chrome Canary](http://chrome.com/canary) and [Edge Canary](https://www.microsoftedgeinsider.com/en-us/download) behind the flag `--enable-unsafe-webgpu`.
+> The legacy `-s USE_WEBGPU=1` bindings are deprecated; these samples now use Dawn's `--use-port=emdawnwebgpu`, which provides the up-to-date `webgpu.h` C API (surface-based rendering, `WGPUStringView`, etc.).
+> 
+> These samples run in any browser with WebGPU enabled (e.g. recent Chrome / Edge).

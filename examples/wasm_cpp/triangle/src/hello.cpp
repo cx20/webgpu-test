@@ -1,9 +1,9 @@
 // forked from https://github.com/cwoffenden/hello-webgpu
 
+#include <stdio.h>
 #include <string.h>
 #include <webgpu/webgpu.h>
 #include <emscripten/html5.h>
-#include <emscripten/html5_webgpu.h>
 
 namespace window {
 	typedef struct HandleImpl* Handle;
@@ -15,15 +15,14 @@ namespace window {
 }
 
 namespace webgpu {
-	WGPUDevice create(window::Handle window, WGPUBackendType type = WGPUBackendType_Force32);
-	WGPUSwapChain createSwapChain(WGPUDevice device);
-	WGPUTextureFormat getSwapChainFormat(WGPUDevice device);
+	void createSurface(WGPUDevice device);
+	WGPUTextureFormat getSurfaceFormat();
 }
 
 namespace window {
 	/**
 	 * Temporary dummy window handle.
-	 */ 
+	 */
 	struct HandleImpl {} DUMMY;
 
 	EM_BOOL em_redraw(double /*time*/, void *userData) {
@@ -44,43 +43,64 @@ void window::loop(window::Handle /*wHnd*/, window::Redraw func) {
 	emscripten_request_animation_frame_loop(window::em_redraw, (void*)func);
 }
 
-WGPUDevice webgpu::create(window::Handle /*window*/, WGPUBackendType /*type*/) {
-	return emscripten_webgpu_get_device();
-}
-
-WGPUSwapChain webgpu::createSwapChain(WGPUDevice device) {
-	WGPUSurfaceDescriptorFromCanvasHTMLSelector canvDesc = {};
-	canvDesc.chain.sType = WGPUSType_SurfaceDescriptorFromCanvasHTMLSelector;
-	canvDesc.selector = "canvas";
-	
-	WGPUSurfaceDescriptor surfDesc = {};
-	surfDesc.nextInChain = reinterpret_cast<WGPUChainedStruct*>(&canvDesc);
-	
-	WGPUSurface surface = wgpuInstanceCreateSurface(nullptr, &surfDesc);
-	
-	WGPUSwapChainDescriptor swapDesc = {};
-	swapDesc.usage  = WGPUTextureUsage_RenderAttachment;
-	swapDesc.format = WGPUTextureFormat_BGRA8Unorm;
-	swapDesc.width  = 640;
-	swapDesc.height = 480;
-	swapDesc.presentMode = WGPUPresentMode_Fifo;
-	
-	WGPUSwapChain swapchain = wgpuDeviceCreateSwapChain(device, surface, &swapDesc);
-	
-	return swapchain;
-}
-
-WGPUTextureFormat webgpu::getSwapChainFormat(WGPUDevice /*device*/) {
-	return WGPUTextureFormat_BGRA8Unorm;
-}
-
+WGPUInstance instance;
 WGPUDevice device;
 WGPUQueue queue;
-WGPUSwapChain swapchain;
+WGPUSurface surface;
+
+// On the web the preferred canvas format is typically BGRA8Unorm.
+WGPUTextureFormat surfaceFormat = WGPUTextureFormat_BGRA8Unorm;
 
 WGPURenderPipeline pipeline;
 WGPUBuffer vertBuf; // vertex buffer with triangle position and colours
 WGPUBuffer indxBuf; // index buffer
+
+void webgpu::createSurface(WGPUDevice device) {
+	WGPUEmscriptenSurfaceSourceCanvasHTMLSelector canvasDesc = {};
+	canvasDesc.chain.sType = WGPUSType_EmscriptenSurfaceSourceCanvasHTMLSelector;
+	canvasDesc.selector = { "canvas", WGPU_STRLEN };
+
+	WGPUSurfaceDescriptor surfDesc = {};
+	surfDesc.nextInChain = &canvasDesc.chain;
+
+	surface = wgpuInstanceCreateSurface(instance, &surfDesc);
+
+	WGPUSurfaceConfiguration config = {};
+	config.device      = device;
+	config.format      = surfaceFormat;
+	config.usage       = WGPUTextureUsage_RenderAttachment;
+	config.width       = 640;
+	config.height      = 480;
+	config.alphaMode   = WGPUCompositeAlphaMode_Auto;
+	config.presentMode = WGPUPresentMode_Fifo;
+
+	wgpuSurfaceConfigure(surface, &config);
+}
+
+WGPUTextureFormat webgpu::getSurfaceFormat() {
+	return surfaceFormat;
+}
+
+WGPUShaderModule createShader(const char* const code, const char* label = nullptr) {
+	WGPUShaderSourceWGSL wgsl = {};
+	wgsl.chain.sType = WGPUSType_ShaderSourceWGSL;
+	wgsl.code = { code, WGPU_STRLEN };
+	WGPUShaderModuleDescriptor desc = {};
+	desc.nextInChain = &wgsl.chain;
+	if (label) {
+		desc.label = { label, WGPU_STRLEN };
+	}
+	return wgpuDeviceCreateShaderModule(device, &desc);
+}
+
+WGPUBuffer createBuffer(const void* data, size_t size, WGPUBufferUsage usage) {
+	WGPUBufferDescriptor desc = {};
+	desc.usage = WGPUBufferUsage_CopyDst | usage;
+	desc.size  = size;
+	WGPUBuffer buffer = wgpuDeviceCreateBuffer(device, &desc);
+	wgpuQueueWriteBuffer(queue, buffer, 0, data, size);
+	return buffer;
+}
 
 char const triangle_vert_wgsl[] = R"(
 	struct VertexOut {
@@ -105,36 +125,6 @@ char const triangle_frag_wgsl[] = R"(
 		return vec4<f32>(vCol, 1.0);
 	}
 )";
-
-WGPUShaderModule createShader(const uint32_t* code, uint32_t size, const char* label = nullptr) {
-	WGPUShaderModuleSPIRVDescriptor spirv = {};
-	spirv.chain.sType = WGPUSType_ShaderModuleSPIRVDescriptor;
-	spirv.codeSize = size / sizeof(uint32_t);
-	spirv.code = code;
-	WGPUShaderModuleDescriptor desc = {};
-	desc.nextInChain = reinterpret_cast<WGPUChainedStruct*>(&spirv);
-	desc.label = label;
-	return wgpuDeviceCreateShaderModule(device, &desc);
-}
-
-WGPUShaderModule createShader(const char* const code, const char* label = nullptr) {
-	WGPUShaderModuleWGSLDescriptor wgsl = {};
-	wgsl.chain.sType = WGPUSType_ShaderModuleWGSLDescriptor;
-	wgsl.code = code;
-	WGPUShaderModuleDescriptor desc = {};
-	desc.nextInChain = reinterpret_cast<WGPUChainedStruct*>(&wgsl);
-	desc.label = label;
-	return wgpuDeviceCreateShaderModule(device, &desc);
-}
-
-WGPUBuffer createBuffer(const void* data, size_t size, WGPUBufferUsage usage) {
-	WGPUBufferDescriptor desc = {};
-	desc.usage = WGPUBufferUsage_CopyDst | usage;
-	desc.size  = size;
-	WGPUBuffer buffer = wgpuDeviceCreateBuffer(device, &desc);
-	wgpuQueueWriteBuffer(queue, buffer, 0, data, size);
-	return buffer;
-}
 
 void createPipelineAndBuffers() {
 	WGPUShaderModule vertMod = createShader(triangle_vert_wgsl);
@@ -166,13 +156,13 @@ void createPipelineAndBuffers() {
 	blend.alpha.srcFactor = WGPUBlendFactor_One;
 	blend.alpha.dstFactor = WGPUBlendFactor_Zero;
 	WGPUColorTargetState colorTarget = {};
-	colorTarget.format = webgpu::getSwapChainFormat(device);
+	colorTarget.format = webgpu::getSurfaceFormat();
 	colorTarget.blend = &blend;
 	colorTarget.writeMask = WGPUColorWriteMask_All;
 
 	WGPUFragmentState fragment = {};
 	fragment.module = fragMod;
-	fragment.entryPoint = "main";
+	fragment.entryPoint = { "main", WGPU_STRLEN };
 	fragment.targetCount = 1;
 	fragment.targets = &colorTarget;
 
@@ -184,7 +174,7 @@ void createPipelineAndBuffers() {
 	desc.depthStencil = nullptr;
 
 	desc.vertex.module = vertMod;
-	desc.vertex.entryPoint = "main";
+	desc.vertex.entryPoint = { "main", WGPU_STRLEN };
 	desc.vertex.bufferCount = 1;
 	desc.vertex.buffers = &vertexBufferLayout;
 
@@ -218,7 +208,9 @@ void createPipelineAndBuffers() {
 }
 
 bool redraw() {
-	WGPUTextureView backBufView = wgpuSwapChainGetCurrentTextureView(swapchain);			// create textureView
+	WGPUSurfaceTexture surfaceTexture;
+	wgpuSurfaceGetCurrentTexture(surface, &surfaceTexture);								// acquire the current texture
+	WGPUTextureView backBufView = wgpuTextureCreateView(surfaceTexture.texture, nullptr);	// create textureView
 
 	WGPURenderPassColorAttachment colorDesc = {};
 	colorDesc.view    = backBufView;
@@ -251,20 +243,52 @@ bool redraw() {
 	wgpuQueueSubmit(queue, 1, &commands);
 	wgpuCommandBufferRelease(commands);														// release commands
 	wgpuTextureViewRelease(backBufView);													// release textureView
+	wgpuTextureRelease(surfaceTexture.texture);												// release surface texture
 
 	return true;
 }
 
-extern "C" int __main__(int /*argc*/, char* /*argv*/[]) {
-	if (window::Handle wHnd = window::create()) {
-		if ((device = webgpu::create(wHnd))) {
-			queue = wgpuDeviceGetQueue(device);
-			swapchain = webgpu::createSwapChain(device);
-			createPipelineAndBuffers();
+// Called once the device has been obtained: set up the surface, pipeline and
+// start the render loop.
+void start() {
+	queue = wgpuDeviceGetQueue(device);
+	webgpu::createSurface(device);
+	createPipelineAndBuffers();
 
-			window::show(wHnd);
-			window::loop(wHnd, redraw);
-		}
+	if (window::Handle wHnd = window::create()) {
+		window::show(wHnd);
+		window::loop(wHnd, redraw);
 	}
+}
+
+void onDeviceRequestEnded(WGPURequestDeviceStatus status, WGPUDevice dev, WGPUStringView message, void* /*userdata1*/, void* /*userdata2*/) {
+	if (status != WGPURequestDeviceStatus_Success) {
+		printf("Failed to get a WebGPU device: %.*s\n", (int)message.length, message.data);
+		return;
+	}
+	device = dev;
+	start();
+}
+
+void onAdapterRequestEnded(WGPURequestAdapterStatus status, WGPUAdapter adapter, WGPUStringView message, void* /*userdata1*/, void* /*userdata2*/) {
+	if (status != WGPURequestAdapterStatus_Success) {
+		printf("Failed to get a WebGPU adapter: %.*s\n", (int)message.length, message.data);
+		return;
+	}
+	WGPUDeviceDescriptor deviceDesc = {};
+	WGPURequestDeviceCallbackInfo callbackInfo = {};
+	callbackInfo.mode = WGPUCallbackMode_AllowSpontaneous;
+	callbackInfo.callback = onDeviceRequestEnded;
+	wgpuAdapterRequestDevice(adapter, &deviceDesc, callbackInfo);
+}
+
+extern "C" int __main__(int /*argc*/, char* /*argv*/[]) {
+	instance = wgpuCreateInstance(nullptr);
+
+	WGPURequestAdapterCallbackInfo callbackInfo = {};
+	callbackInfo.mode = WGPUCallbackMode_AllowSpontaneous;
+	callbackInfo.callback = onAdapterRequestEnded;
+	wgpuInstanceRequestAdapter(instance, nullptr, callbackInfo);
+
 	return 0;
 }
