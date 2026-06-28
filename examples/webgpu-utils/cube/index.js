@@ -1,6 +1,10 @@
 // forked from https://github.com/greggman/webgpu-utils/blob/main/examples/cube.js
 import { mat4, vec3 } from "wgpu-matrix";
-import { makeShaderDataDefinitions, makeStructuredView} from "webgpu-utils";
+import {
+    makeShaderDataDefinitions,
+    makeStructuredView,
+    createBuffersAndAttributesFromArrays,
+} from "webgpu-utils";
 
 async function main() {
     const gpu = navigator.gpu;
@@ -26,15 +30,6 @@ async function main() {
     };
 
     const shaderSrc = document.getElementById("shader").textContent;
-
-    function createBuffer(device, data, usage) {
-        const buffer = device.createBuffer({
-            size: data.byteLength,
-            usage: usage | GPUBufferUsage.COPY_DST,
-        });
-        device.queue.writeBuffer(buffer, 0, data);
-        return buffer;
-    }
 
     // Cube data
     //             1.0 y 
@@ -110,10 +105,13 @@ async function main() {
         20, 21, 22,   20, 22, 23   // Left face
     ];
   
-    const positionBuffer = createBuffer(device, new Float32Array(positions),      GPUBufferUsage.VERTEX);
-    const colorBuffer    = createBuffer(device, new Float32Array(unpackedColors), GPUBufferUsage.VERTEX);
-    const indicesBuffer  = createBuffer(device, new Uint16Array(indices),         GPUBufferUsage.INDEX);
-  
+    // Build interleaved vertex/index buffers with webgpu-utils
+    const vertices = createBuffersAndAttributesFromArrays(device, {
+        position: { data: positions,      numComponents: 3 },
+        color:    { data: unpackedColors, numComponents: 4 },
+        indices:  new Uint16Array(indices),
+    });
+
     async function createShaderModule(device, code) {
         device.pushErrorScope("validation");
         const shader = device.createShaderModule({
@@ -133,26 +131,7 @@ async function main() {
         vertex: {
             module: shaderModule,
             entryPoint: "vs_main",
-            buffers: [
-                // position
-                {
-                    arrayStride: 3 * 4, // 3 floats, 4 bytes each
-                    attributes: [{
-                        shaderLocation: 0,
-                        offset: 0,
-                        format: "float32x3"
-                    }, ],
-                },
-                // color
-                {
-                    arrayStride: 4 * 4, // 4 floats, 4 bytes each
-                    attributes: [{
-                        shaderLocation: 1,
-                        offset: 0,
-                        format: "float32x4"
-                    }, ],
-                },
-            ],
+            buffers: vertices.bufferLayouts,
         },
         fragment: {
             module: shaderModule,
@@ -279,10 +258,9 @@ async function main() {
         const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
         passEncoder.setPipeline(pipeline);
         passEncoder.setBindGroup(0, bindGroup);
-        passEncoder.setVertexBuffer(0, positionBuffer);
-        passEncoder.setVertexBuffer(1, colorBuffer);
-        passEncoder.setIndexBuffer(indicesBuffer, "uint16");
-        passEncoder.drawIndexed(indices.length);
+        passEncoder.setVertexBuffer(0, vertices.buffers[0]);
+        passEncoder.setIndexBuffer(vertices.indexBuffer, vertices.indexFormat);
+        passEncoder.drawIndexed(vertices.numElements);
         passEncoder.end();
         device.queue.submit([commandEncoder.finish()]);
 

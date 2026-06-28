@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>[WebGPU][WGSL] Testing Cube Using webgpu-utils</title>
+  <title>[WebGPU][WGSL] Testing Textured Cube Using webgpu-utils</title>
   <link rel="stylesheet" type="text/css" href="style.css">
 </head>
 <body>
@@ -18,31 +18,32 @@
 <script id="shader" type="x-shader/x-shader">
 struct VSUniforms {
     worldViewProjection: mat4x4<f32>,
-    worldInverseTranspose: mat4x4<f32>,
 };
 @group(0) @binding(0) var<uniform> vsUniforms: VSUniforms;
+@group(0) @binding(1) var mySampler: sampler;
+@group(0) @binding(2) var myTexture: texture_2d<f32>;
 
 struct VSInput {
-    @location(0) position: vec4<f32>,
-    @location(1) color: vec4<f32>,
+    @location(0) position: vec3<f32>,
+    @location(1) texcoord: vec2<f32>,
 };
 
 struct VSOutput {
     @builtin(position) position: vec4<f32>,
-    @location(0) color: vec4<f32>,
+    @location(0) texcoord: vec2<f32>,
 };
 
 @vertex
 fn vs_main(v: VSInput) -> VSOutput {
     var vsOut: VSOutput;
-    vsOut.position = vsUniforms.worldViewProjection * v.position;
-    vsOut.color = v.color;
+    vsOut.position = vsUniforms.worldViewProjection * vec4<f32>(v.position, 1.0);
+    vsOut.texcoord = v.texcoord;
     return vsOut;
 }
 
 @fragment
 fn fs_main(v: VSOutput) -> @location(0) vec4<f32> {
-    return v.color;
+    return textureSample(myTexture, mySampler, v.texcoord);
 }
 </script>
 

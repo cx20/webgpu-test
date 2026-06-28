@@ -1,4 +1,6 @@
 // forked from https://github.com/greggman/webgpu-utils/blob/main/examples/cube.js
+import { createBuffersAndAttributesFromArrays } from "webgpu-utils";
+
 async function main() {
     const gpu = navigator.gpu;
     const adapter = await gpu.requestAdapter();
@@ -16,56 +18,44 @@ async function main() {
         format: presentationFormat,
     });
 
-    const canvasInfo = {
-        canvas,
-        context,
-        presentationFormat,
-    };
-
     const vertexShaderWGSL   = document.getElementById("vs").textContent;
     const fragmentShaderWGSL = document.getElementById("fs").textContent;
 
-    function createBuffer(device, data, usage) {
-        const buffer = device.createBuffer({
-            size: data.byteLength,
-            usage: usage | GPUBufferUsage.COPY_DST,
-        });
-        device.queue.writeBuffer(buffer, 0, data);
-        return buffer;
-    }
-
     // Square data
-    //             1.0 y 
-    //              ^  -1.0 
+    //             1.0 y
+    //              ^  -1.0
     //              | / z
     //              |/       x
     // -1.0 -----------------> +1.0
     //            / |
     //      +1.0 /  |
     //           -1.0
-    // 
+    //
     //        [0]------[1]
     //         |        |
     //         |        |
     //         |        |
     //        [2]------[3]
     //
-    let positions = [ 
+    const positions = [
         -0.5, 0.5, 0.0, // v0
          0.5, 0.5, 0.0, // v1
         -0.5,-0.5, 0.0, // v2
          0.5,-0.5, 0.0  // v3
     ];
-    let colors = [ 
+    const colors = [
         1.0, 0.0, 0.0, 1.0, // v0
         0.0, 1.0, 0.0, 1.0, // v1
         0.0, 0.0, 1.0, 1.0, // v2
         1.0, 1.0, 0.0, 1.0  // v3
     ];
-  
-    const vertexBuffer = createBuffer(device, new Float32Array(positions), GPUBufferUsage.VERTEX);
-    const colorBuffer  = createBuffer(device, new Float32Array(colors),    GPUBufferUsage.VERTEX);
-  
+
+    // Build interleaved vertex buffer + layout with webgpu-utils
+    const vertices = createBuffersAndAttributesFromArrays(device, {
+        position: { data: positions, numComponents: 3 },
+        color:    { data: colors,    numComponents: 4 },
+    });
+
     async function createShaderModule(device, code) {
         device.pushErrorScope("validation");
         const shader = device.createShaderModule({
@@ -86,30 +76,7 @@ async function main() {
         vertex: {
             module: vertexShaderModule,
             entryPoint: "main",
-            buffers: [
-                // position
-                {
-                    arrayStride: 3 * 4, // 3 floats, 4 bytes each
-                    attributes: [
-                        {
-                            shaderLocation: 0,
-                            offset: 0,
-                           format: "float32x3"
-                        }
-                    ]
-                },
-                // color
-                {
-                    arrayStride: 4 * 4, // 4 floats, 4 bytes each
-                    attributes: [
-                        {
-                            shaderLocation: 1,
-                            offset: 0,
-                            format: "float32x4"
-                        }
-                    ]
-                }
-            ]
+            buffers: vertices.bufferLayouts,
         },
         fragment: {
             module: fragmentShaderModule,
@@ -140,9 +107,8 @@ async function main() {
         const commandEncoder = device.createCommandEncoder();
         const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
         passEncoder.setPipeline(pipeline);
-        passEncoder.setVertexBuffer(0, vertexBuffer);
-        passEncoder.setVertexBuffer(1, colorBuffer);
-        passEncoder.draw(4, 1, 0, 0);
+        passEncoder.setVertexBuffer(0, vertices.buffers[0]);
+        passEncoder.draw(vertices.numElements);
         passEncoder.end();
         device.queue.submit([commandEncoder.finish()]);
 

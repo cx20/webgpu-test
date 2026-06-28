@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>[WebGPU][WGSL] Testing Teapot Using webgpu-utils</title>
+  <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+<body>
+
+<script type="importmap">
+{
+    "imports": {
+        "wgpu-matrix": "https://wgpu-matrix.org/dist/1.x/wgpu-matrix.module.js",
+        "webgpu-utils": "https://greggman.github.io/webgpu-utils/dist/2.x/webgpu-utils.module.js"
+    }
+}
+</script>
+
+<script id="shader" type="x-shader/x-shader">
+struct VSUniforms {
+    worldViewProjection: mat4x4<f32>,
+    world: mat4x4<f32>,
+};
+@group(0) @binding(0) var<uniform> vsUniforms: VSUniforms;
+@group(0) @binding(1) var mySampler: sampler;
+@group(0) @binding(2) var myTexture: texture_2d<f32>;
+
+struct FSUniforms {
+    lightPosition: vec3<f32>,
+};
+@group(0) @binding(3) var<uniform> fsUniforms: FSUniforms;
+
+struct VSInput {
+    @location(0) position: vec3<f32>,
+    @location(1) normal: vec3<f32>,
+    @location(2) texcoord: vec2<f32>,
+};
+
+struct VSOutput {
+    @builtin(position) position: vec4<f32>,
+    @location(0) worldPosition: vec3<f32>,
+    @location(1) normal: vec3<f32>,
+    @location(2) texcoord: vec2<f32>,
+};
+
+@vertex
+fn vs_main(v: VSInput) -> VSOutput {
+    var vsOut: VSOutput;
+    vsOut.position = vsUniforms.worldViewProjection * vec4<f32>(v.position, 1.0);
+    vsOut.worldPosition = (vsUniforms.world * vec4<f32>(v.position, 1.0)).xyz;
+    vsOut.normal = (vsUniforms.world * vec4<f32>(v.normal, 0.0)).xyz;
+    vsOut.texcoord = v.texcoord;
+    return vsOut;
+}
+
+@fragment
+fn fs_main(v: VSOutput) -> @location(0) vec4<f32> {
+    let lightDirection = normalize(fsUniforms.lightPosition - v.worldPosition);
+    let normal = normalize(v.normal);
+    let lightWeighting = max(dot(normal, lightDirection), 0.0);
+    let fragmentColor = textureSample(myTexture, mySampler, v.texcoord);
+    return vec4<f32>(fragmentColor.rgb * lightWeighting, fragmentColor.a);
+}
+</script>
+
+<canvas id="c" width="465" height="465"></canvas>
+<script type="module" src="index.js"></script>
+</body>
+</html>
