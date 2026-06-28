@@ -671,6 +671,16 @@ struct LoadCtx {
 };
 LoadCtx gLoad = {};
 
+// Decorative ground tracks (the truck's tyre ruts) drawn with the main pipeline.
+struct GroundTrack {
+	WGPUBuffer posBuf, normalBuf, uvBuf, jointsBuf, weightsBuf, indexBuf;
+	WGPUBuffer uniformBuf, jointBuf;
+	WGPUBindGroup bindGroup;
+	float position[3];
+	float color[4];
+};
+std::vector<GroundTrack> gGroundTracks;
+
 WGPUBuffer createDataBuffer(const void* data, size_t bytes, WGPUBufferUsage usage) {
 	WGPUBufferDescriptor d = {};
 	d.usage = WGPUBufferUsage_CopyDst | usage;
@@ -1191,6 +1201,86 @@ void drawModel(WGPURenderPassEncoder pass, const float* view, const float* proje
 	}
 }
 
+void createGroundTracks() {
+	const float width = 100.0f, height = 0.1f;
+	float positions[] = {
+		-width / 2, 0, 0,   width / 2, 0, 0,   width / 2, 0, height,   -width / 2, 0, height
+	};
+	float normals[]  = { 0,1,0, 0,1,0, 0,1,0, 0,1,0 };
+	float uvs[]      = { 0,0, 1,0, 1,1, 0,1 };
+	uint32_t indices[] = { 0,1,2, 0,2,3 };
+	uint32_t joints[16] = {0};
+	float weights[16] = {0};
+	float trackZ[2] = { -1.6f, -2.35f };
+
+	for (int i = 0; i < 2; i++) {
+		GroundTrack t = {};
+		t.position[0] = -49.5f; t.position[1] = 0.0f; t.position[2] = trackZ[i];
+		t.color[0] = t.color[1] = t.color[2] = t.color[3] = 1.0f;
+		t.posBuf     = createDataBuffer(positions, sizeof(positions), WGPUBufferUsage_Vertex);
+		t.normalBuf  = createDataBuffer(normals,   sizeof(normals),   WGPUBufferUsage_Vertex);
+		t.uvBuf      = createDataBuffer(uvs,       sizeof(uvs),       WGPUBufferUsage_Vertex);
+		t.jointsBuf  = createDataBuffer(joints,    sizeof(joints),    WGPUBufferUsage_Vertex);
+		t.weightsBuf = createDataBuffer(weights,   sizeof(weights),   WGPUBufferUsage_Vertex);
+		t.indexBuf   = createDataBuffer(indices,   sizeof(indices),   WGPUBufferUsage_Index);
+
+		WGPUBufferDescriptor ud = {};
+		ud.usage = WGPUBufferUsage_Uniform | WGPUBufferUsage_CopyDst;
+		ud.size = 304;
+		t.uniformBuf = wgpuDeviceCreateBuffer(device, &ud);
+		WGPUBufferDescriptor jd = {};
+		jd.usage = WGPUBufferUsage_Storage | WGPUBufferUsage_CopyDst;
+		jd.size = MAX_JOINTS * 64;
+		t.jointBuf = wgpuDeviceCreateBuffer(device, &jd);
+
+		WGPUBindGroupEntry e[4] = {};
+		e[0].binding = 0; e[0].buffer = t.uniformBuf; e[0].size = 304;
+		e[1].binding = 1; e[1].buffer = t.jointBuf; e[1].size = MAX_JOINTS * 64;
+		e[2].binding = 2; e[2].sampler = gSampler;
+		e[3].binding = 3; e[3].textureView = gDefaultTexView;
+		WGPUBindGroupDescriptor bgd = {};
+		bgd.layout = wgpuRenderPipelineGetBindGroupLayout(mainPipeline, 0);
+		bgd.entryCount = 4;
+		bgd.entries = e;
+		t.bindGroup = wgpuDeviceCreateBindGroup(device, &bgd);
+		gGroundTracks.push_back(t);
+	}
+}
+
+void drawGroundTracks(WGPURenderPassEncoder pass, const float* view, const float* projection) {
+	if (gGroundTracks.empty()) return;
+	wgpuRenderPassEncoderSetPipeline(pass, mainPipeline);
+	for (auto& t : gGroundTracks) {
+		float modelMatrix[16];
+		mat4_identity(modelMatrix);
+		mat4_translate(modelMatrix, t.position[0], t.position[1], t.position[2]);
+		float invM[16], normalMatrix[16];
+		mat4_invert(invM, modelMatrix);
+		mat4_transpose(normalMatrix, invM);
+
+		unsigned char buf[304];
+		float* f = (float*)buf;
+		memcpy(f + 0,  modelMatrix, 64);
+		memcpy(f + 16, view, 64);
+		memcpy(f + 32, projection, 64);
+		memcpy(f + 48, normalMatrix, 64);
+		f[64] = 1.0f; f[65] = 1.0f; f[66] = 1.0f; f[67] = 0.0f;
+		f[68] = t.color[0]; f[69] = t.color[1]; f[70] = t.color[2]; f[71] = t.color[3];
+		uint32_t* u = (uint32_t*)buf;
+		u[72] = 0u; u[73] = 0u; u[74] = 1u; u[75] = 0u;
+		wgpuQueueWriteBuffer(queue, t.uniformBuf, 0, buf, 304);
+
+		wgpuRenderPassEncoderSetBindGroup(pass, 0, t.bindGroup, 0, nullptr);
+		wgpuRenderPassEncoderSetVertexBuffer(pass, 0, t.posBuf, 0, WGPU_WHOLE_SIZE);
+		wgpuRenderPassEncoderSetVertexBuffer(pass, 1, t.normalBuf, 0, WGPU_WHOLE_SIZE);
+		wgpuRenderPassEncoderSetVertexBuffer(pass, 2, t.uvBuf, 0, WGPU_WHOLE_SIZE);
+		wgpuRenderPassEncoderSetVertexBuffer(pass, 3, t.jointsBuf, 0, WGPU_WHOLE_SIZE);
+		wgpuRenderPassEncoderSetVertexBuffer(pass, 4, t.weightsBuf, 0, WGPU_WHOLE_SIZE);
+		wgpuRenderPassEncoderSetIndexBuffer(pass, t.indexBuf, WGPUIndexFormat_Uint32, 0, WGPU_WHOLE_SIZE);
+		wgpuRenderPassEncoderDrawIndexed(pass, 6, 1, 0, 0, 0);
+	}
+}
+
 //****************************************************************************/
 // Render
 
@@ -1260,6 +1350,7 @@ bool redraw() {
 		wgpuRenderPassEncoderDraw(pass, 36, 1, 0, 0);
 	}
 
+	drawGroundTracks(pass, view, projection);
 	drawModel(pass, view, projection, time);
 
 	wgpuRenderPassEncoderEnd(pass);
@@ -1282,6 +1373,7 @@ void start() {
 	createSurface();
 	createSkyboxPipeline();
 	createMainPipeline();
+	createGroundTracks();
 	loadSkybox();
 	loadModels();
 	emscripten_request_animation_frame_loop(em_redraw, nullptr);

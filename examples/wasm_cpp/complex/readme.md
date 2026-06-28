@@ -41,7 +41,7 @@ lighting:
 - **Fox** and **T-Rex** — GPU **skinning** animation (joint matrices fed to the
   vertex shader through a storage buffer), playing their walk/run clips.
 
-(The decorative ground tracks from the `webgpu_wgsl` reference are not drawn.)
+Two white ground tracks (the truck's tyre ruts) are also drawn.
 
 [Live Demo](https://cx20.github.io/webgpu-test/examples/wasm_cpp/complex/index.html)
 
