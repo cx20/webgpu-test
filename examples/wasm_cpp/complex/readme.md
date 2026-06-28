@@ -18,28 +18,30 @@ Result:
 +------------------------------------------+
 |Hello, World!                    [_][~][X]|
 +------------------------------------------+
-|         (sky / cubemap skybox)           |
-|            ____________                  |
-|           /  CesiumMilk \___             |
-|          | Truck  [o]  [o] |             |
-|           \________________/             |
-|             (o)        (o)               |
+|        (sky / cubemap skybox)            |
+|     ___        /\_/\                      |
+|    |Truck|    ( Fox )      __/T-Rex\__    |
+|    |__o_o|     >   <      /          \    |
 +------------------------------------------+
 ```
 
-(WIP) Unlike the other samples, this one is built with the **standard
-Emscripten runtime** (not `MINIMAL_RUNTIME`) and loads all assets from the
-network **at runtime over URLs** (no embedded assets):
+Unlike the other samples, this one is built with the **standard Emscripten
+runtime** (not `MINIMAL_RUNTIME`) and loads all assets from the network **at
+runtime over URLs** (no embedded assets):
 
 - glTF models are fetched with `emscripten_async_wget_data` and parsed with
   [cgltf](https://github.com/jkuhlmann/cgltf) (`../common/cgltf.h`); textures
   are decoded with [stb_image](https://github.com/nothings/stb).
 - A cubemap **skybox** is loaded from six JPEG faces.
 
-Milestone 1 (current): cubemap skybox + the **CesiumMilkTruck** glTF model
-(node animation — the wheels spin), with an orbiting camera and per-fragment
-lighting. Skinned models (Fox, T-Rex) and the ground tracks from the
-`webgpu_wgsl` reference are still to be added.
+The scene shows three glTF models over an orbiting camera with per-fragment
+lighting:
+
+- **CesiumMilkTruck** — node animation (the wheels spin).
+- **Fox** and **T-Rex** — GPU **skinning** animation (joint matrices fed to the
+  vertex shader through a storage buffer), playing their walk/run clips.
+
+(The decorative ground tracks from the `webgpu_wgsl` reference are not drawn.)
 
 [Live Demo](https://cx20.github.io/webgpu-test/examples/wasm_cpp/complex/index.html)
 
