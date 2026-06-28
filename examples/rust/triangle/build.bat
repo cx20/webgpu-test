@@ -1,5 +1,4 @@
-rustup default nightly
-cargo install -f wasm-bindgen-cli
-SET RUSTFLAGS=--cfg=web_sys_unstable_apis
+rustup target add wasm32-unknown-unknown
+cargo install wasm-bindgen-cli
 cargo build --target=wasm32-unknown-unknown --release
-wasm-bindgen --web target/wasm32-unknown-unknown/release/triangle.wasm --out-dir .
+wasm-bindgen --target web target/wasm32-unknown-unknown/release/triangle.wasm --out-dir .

@@ -1,17 +1,16 @@
 # square
 
-This example renders a square to a window.
+This example renders a square to a `<canvas>` using WebGPU (wgpu) compiled to WebAssembly.
 
 ## How To Build
 
 ```
-rustup default nightly
-cargo install -f wasm-bindgen-cli
-SET RUSTFLAGS=--cfg=web_sys_unstable_apis
+rustup target add wasm32-unknown-unknown
+cargo install wasm-bindgen-cli
 cargo build --target=wasm32-unknown-unknown --release
-wasm-bindgen --web target/wasm32-unknown-unknown/release/square.wasm --out-dir .
+wasm-bindgen --target web target/wasm32-unknown-unknown/release/square.wasm --out-dir .
 ```
 
-See the wgpu-rs [wiki article](https://github.com/gfx-rs/wgpu/wiki/Running-on-the-Web-with-WebGPU-and-WebGL) for more details.
+Then serve this directory over HTTP and open `index.html` in a WebGPU-capable browser.
 
-
+See the wgpu [examples](https://github.com/gfx-rs/wgpu/tree/trunk/examples) for more details.
