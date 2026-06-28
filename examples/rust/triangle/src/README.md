@@ -1,19 +1,14 @@
 # triangle
 
-This example renders a triangle to a window.
+This example renders a triangle to a `<canvas>` using WebGPU (wgpu) compiled to WebAssembly.
 
 ## How To Build
 
 ```
-rustup default nightly
-
-cargo install -f wasm-bindgen-cli
-
-SET RUSTFLAGS=--cfg=web_sys_unstable_apis
-cargo build --target wasm32-unknown-unknown --example triangle --release
-
-wasm-bindgen --out-dir target/generated --web target/wasm32-unknown-unknown/release/examples/triangle.wasm
+rustup target add wasm32-unknown-unknown
+cargo install wasm-bindgen-cli
+cargo build --target wasm32-unknown-unknown --release
+wasm-bindgen --target web target/wasm32-unknown-unknown/release/triangle.wasm --out-dir .
 ```
 
-See the wgpu-rs [wiki article](https://github.com/gfx-rs/wgpu/wiki/Running-on-the-Web-with-WebGPU-and-WebGL) for more details.
-
+See the wgpu [examples](https://github.com/gfx-rs/wgpu/tree/trunk/examples) for more details.
