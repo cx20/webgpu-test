@@ -608,8 +608,15 @@ struct Node {
 	float t[3], r[4], s[3];
 	float world[16];
 	int meshIndex;
+	int skinIndex;
 	std::vector<int> children;
 	std::vector<PrimInstance> instances;
+};
+
+struct Skin {
+	std::vector<int> joints;
+	std::vector<float> inverseBind;   // joints * 16
+	std::vector<float> jointMatrices; // joints * 16 (updated per frame)
 };
 
 struct AnimChannel {
@@ -623,22 +630,56 @@ struct AnimChannel {
 struct Model {
 	std::vector<Node> nodes;
 	std::vector<std::vector<Primitive>> meshes;
+	std::vector<Skin> skins;
 	std::vector<int> rootNodes;
 	float baseTransform[16];
 	std::vector<AnimChannel> channels;
 	float animDuration;
 	bool ready;
 };
-Model gModel = {};
+
+struct ModelConfig {
+	const char* url;
+	float scale;
+	float rot[3];
+	float pos[3];
+	const char* animName; // "" => first animation
+};
+
+static ModelConfig gConfigs[] = {
+	{ "https://cx20.github.io/gltf-test/sampleModels/CesiumMilkTruck/glTF/CesiumMilkTruck.gltf", 0.4f, {0, PI/2, 0}, {0, 0, -2}, "" },
+	{ "https://cx20.github.io/gltf-test/sampleModels/Fox/glTF/Fox.gltf",                          0.05f, {0, PI/2, 0}, {0, 0, 0}, "Run" },
+	{ "https://raw.githubusercontent.com/BabylonJS/Exporters/d66db9a7042fef66acb62e1b8770739463b0b567/Maya/Samples/glTF%202.0/T-Rex/trex.gltf", 1.0f, {0, PI/2, 0}, {0, 0, 3}, "" }
+};
+static const int gNumConfigs = (int)(sizeof(gConfigs) / sizeof(gConfigs[0]));
+
+std::vector<Model> gModels;
 
 WGPURenderPipeline mainPipeline = nullptr;
 WGPUSampler gSampler = nullptr;
 WGPUTextureView gDefaultTexView = nullptr;
-WGPUTextureView gTruckTexView = nullptr;
 
-cgltf_data* gGltf = nullptr;
-char gBaseUrl[256] = {0};
-unsigned char* gBinCopy = nullptr;
+// Context for the model currently being loaded (models load sequentially).
+struct LoadCtx {
+	cgltf_data* g;
+	char baseUrl[256];
+	unsigned char* binCopy;
+	int modelIndex;
+	std::vector<WGPUTextureView> imageViews; // per glTF image index (null if not loaded)
+	std::vector<int> needed;                 // image indices still to fetch
+	int loaded;
+};
+LoadCtx gLoad = {};
+
+// Decorative ground tracks (the truck's tyre ruts) drawn with the main pipeline.
+struct GroundTrack {
+	WGPUBuffer posBuf, normalBuf, uvBuf, jointsBuf, weightsBuf, indexBuf;
+	WGPUBuffer uniformBuf, jointBuf;
+	WGPUBindGroup bindGroup;
+	float position[3];
+	float color[4];
+};
+std::vector<GroundTrack> gGroundTracks;
 
 WGPUBuffer createDataBuffer(const void* data, size_t bytes, WGPUBufferUsage usage) {
 	WGPUBufferDescriptor d = {};
@@ -727,18 +768,18 @@ void createMainPipeline() {
 	gDefaultTexView = createTexture2D(white, 1, 1);
 }
 
-void updateHierarchy(int idx, const float* parent) {
-	Node& node = gModel.nodes[idx];
+void updateHierarchy(Model& m, int idx, const float* parent) {
+	Node& node = m.nodes[idx];
 	float local[16];
 	mat4_from_trs(local, node.t, node.r, node.s);
 	mat4_multiply(node.world, parent, local);
-	for (int c : node.children) updateHierarchy(c, node.world);
+	for (int c : node.children) updateHierarchy(m, c, node.world);
 }
 
-void updateAnimation(float time) {
-	if (gModel.channels.empty() || gModel.animDuration <= 0.0f) return;
-	float t = fmodf(time, gModel.animDuration);
-	for (auto& ch : gModel.channels) {
+void updateAnimation(Model& m, float time) {
+	if (m.channels.empty() || m.animDuration <= 0.0f) return;
+	float t = fmodf(time, m.animDuration);
+	for (auto& ch : m.channels) {
 		int n = (int)ch.times.size();
 		if (n == 0) continue;
 		int i0 = 0;
@@ -748,7 +789,7 @@ void updateAnimation(float time) {
 		int i1 = (i0 + 1 < n) ? i0 + 1 : i0;
 		float t0 = ch.times[i0], t1 = ch.times[i1];
 		float f = (t1 > t0) ? (t - t0) / (t1 - t0) : 0.0f;
-		Node& node = gModel.nodes[ch.targetNode];
+		Node& node = m.nodes[ch.targetNode];
 		const float* v0 = &ch.values[i0 * ch.ncomp];
 		const float* v1 = &ch.values[i1 * ch.ncomp];
 		if (ch.path == 1) {
@@ -762,30 +803,46 @@ void updateAnimation(float time) {
 	}
 }
 
-void computeCamera() {
+void updateSkins(Model& m) {
+	for (auto& skin : m.skins) {
+		int nj = (int)skin.joints.size();
+		for (int i = 0; i < nj; i++) {
+			const float* jw = m.nodes[skin.joints[i]].world;
+			mat4_multiply(&skin.jointMatrices[i * 16], jw, &skin.inverseBind[i * 16]);
+		}
+	}
+}
+
+void computeCameraAll() {
 	float mn[3] = {  1e30f,  1e30f,  1e30f };
 	float mx[3] = { -1e30f, -1e30f, -1e30f };
-	for (int root : gModel.rootNodes) updateHierarchy(root, gModel.baseTransform);
-	for (size_t ni = 0; ni < gModel.nodes.size(); ni++) {
-		Node& nd = gModel.nodes[ni];
-		if (nd.meshIndex < 0) continue;
-		for (auto& prim : gModel.meshes[nd.meshIndex]) {
-			for (int c = 0; c < 8; c++) {
-				float p[3] = {
-					(c & 1) ? prim.bboxMax[0] : prim.bboxMin[0],
-					(c & 2) ? prim.bboxMax[1] : prim.bboxMin[1],
-					(c & 4) ? prim.bboxMax[2] : prim.bboxMin[2]
-				};
-				const float* w = nd.world;
-				float tx = w[0]*p[0] + w[4]*p[1] + w[8]*p[2] + w[12];
-				float ty = w[1]*p[0] + w[5]*p[1] + w[9]*p[2] + w[13];
-				float tz = w[2]*p[0] + w[6]*p[1] + w[10]*p[2] + w[14];
-				if (tx < mn[0]) mn[0] = tx; if (tx > mx[0]) mx[0] = tx;
-				if (ty < mn[1]) mn[1] = ty; if (ty > mx[1]) mx[1] = ty;
-				if (tz < mn[2]) mn[2] = tz; if (tz > mx[2]) mx[2] = tz;
+	bool any = false;
+	for (auto& m : gModels) {
+		if (!m.ready) continue;
+		for (int root : m.rootNodes) updateHierarchy(m, root, m.baseTransform);
+		for (size_t ni = 0; ni < m.nodes.size(); ni++) {
+			Node& nd = m.nodes[ni];
+			if (nd.meshIndex < 0) continue;
+			for (auto& prim : m.meshes[nd.meshIndex]) {
+				for (int c = 0; c < 8; c++) {
+					float p[3] = {
+						(c & 1) ? prim.bboxMax[0] : prim.bboxMin[0],
+						(c & 2) ? prim.bboxMax[1] : prim.bboxMin[1],
+						(c & 4) ? prim.bboxMax[2] : prim.bboxMin[2]
+					};
+					const float* w = nd.world;
+					float tx = w[0]*p[0] + w[4]*p[1] + w[8]*p[2] + w[12];
+					float ty = w[1]*p[0] + w[5]*p[1] + w[9]*p[2] + w[13];
+					float tz = w[2]*p[0] + w[6]*p[1] + w[10]*p[2] + w[14];
+					if (tx < mn[0]) mn[0] = tx; if (tx > mx[0]) mx[0] = tx;
+					if (ty < mn[1]) mn[1] = ty; if (ty > mx[1]) mx[1] = ty;
+					if (tz < mn[2]) mn[2] = tz; if (tz > mx[2]) mx[2] = tz;
+					any = true;
+				}
 			}
 		}
 	}
+	if (!any) return;
 	extern float gCenter[3];
 	extern float gCameraDistance;
 	gCenter[0] = (mn[0] + mx[0]) * 0.5f;
@@ -796,31 +853,38 @@ void computeCamera() {
 	gCameraDistance = maxSize * 1.5f;
 }
 
-void buildModel(cgltf_data* g) {
-	gModel.meshes.resize(g->meshes_count);
+void loadModelIndex(int i); // fwd decl
+
+void buildCurrentModel() {
+	cgltf_data* g = gLoad.g;
+	ModelConfig& cfg = gConfigs[gLoad.modelIndex];
+	Model& M = gModels[gLoad.modelIndex];
+
+	M.meshes.resize(g->meshes_count);
 	for (size_t mi = 0; mi < g->meshes_count; mi++) {
 		cgltf_mesh* mesh = &g->meshes[mi];
 		for (size_t pi = 0; pi < mesh->primitives_count; pi++) {
 			cgltf_primitive* p = &mesh->primitives[pi];
 			Primitive prim = {};
-			cgltf_accessor *posA = nullptr, *nrmA = nullptr, *uvA = nullptr;
+			cgltf_accessor *posA = nullptr, *nrmA = nullptr, *uvA = nullptr, *jntA = nullptr, *wgtA = nullptr;
 			for (size_t a = 0; a < p->attributes_count; a++) {
 				cgltf_attribute* at = &p->attributes[a];
 				if (at->type == cgltf_attribute_type_position) posA = at->data;
 				else if (at->type == cgltf_attribute_type_normal) nrmA = at->data;
 				else if (at->type == cgltf_attribute_type_texcoord && at->index == 0) uvA = at->data;
+				else if (at->type == cgltf_attribute_type_joints && at->index == 0) jntA = at->data;
+				else if (at->type == cgltf_attribute_type_weights && at->index == 0) wgtA = at->data;
 			}
 			size_t vcount = posA ? posA->count : 0;
 			std::vector<float> pos(vcount * 3, 0.0f);
 			if (posA) cgltf_accessor_unpack_floats(posA, pos.data(), vcount * 3);
 			for (int k = 0; k < 3; k++) { prim.bboxMin[k] = 1e30f; prim.bboxMax[k] = -1e30f; }
-			for (size_t v = 0; v < vcount; v++) {
+			for (size_t v = 0; v < vcount; v++)
 				for (int k = 0; k < 3; k++) {
 					float val = pos[v * 3 + k];
 					if (val < prim.bboxMin[k]) prim.bboxMin[k] = val;
 					if (val > prim.bboxMax[k]) prim.bboxMax[k] = val;
 				}
-			}
 			prim.posBuf = createDataBuffer(pos.data(), pos.size() * 4, WGPUBufferUsage_Vertex);
 
 			std::vector<float> nrm(vcount * 3, 0.0f);
@@ -833,9 +897,17 @@ void buildModel(cgltf_data* g) {
 
 			std::vector<uint32_t> joints(vcount * 4, 0u);
 			std::vector<float> weights(vcount * 4, 0.0f);
+			if (jntA && wgtA) {
+				prim.hasSkinning = true;
+				for (size_t v = 0; v < vcount; v++) {
+					cgltf_uint tmp[4] = { 0, 0, 0, 0 };
+					cgltf_accessor_read_uint(jntA, v, tmp, 4);
+					for (int k = 0; k < 4; k++) joints[v * 4 + k] = tmp[k];
+				}
+				cgltf_accessor_unpack_floats(wgtA, weights.data(), vcount * 4);
+			}
 			prim.jointsBuf = createDataBuffer(joints.data(), joints.size() * 4, WGPUBufferUsage_Vertex);
 			prim.weightsBuf = createDataBuffer(weights.data(), weights.size() * 4, WGPUBufferUsage_Vertex);
-			prim.hasSkinning = false;
 
 			if (p->indices) {
 				size_t ic = p->indices->count;
@@ -855,19 +927,23 @@ void buildModel(cgltf_data* g) {
 			if (p->material && p->material->has_pbr_metallic_roughness) {
 				cgltf_pbr_metallic_roughness* pbr = &p->material->pbr_metallic_roughness;
 				for (int k = 0; k < 4; k++) prim.baseColor[k] = pbr->base_color_factor[k];
-				if (pbr->base_color_texture.texture && gTruckTexView) {
-					prim.hasTexture = true;
-					prim.texView = gTruckTexView;
+				cgltf_texture* tex = pbr->base_color_texture.texture;
+				if (tex && tex->image) {
+					int imgIdx = (int)(tex->image - g->images);
+					if (imgIdx >= 0 && imgIdx < (int)gLoad.imageViews.size() && gLoad.imageViews[imgIdx]) {
+						prim.hasTexture = true;
+						prim.texView = gLoad.imageViews[imgIdx];
+					}
 				}
 			}
-			gModel.meshes[mi].push_back(prim);
+			M.meshes[mi].push_back(prim);
 		}
 	}
 
-	gModel.nodes.resize(g->nodes_count);
+	M.nodes.resize(g->nodes_count);
 	for (size_t ni = 0; ni < g->nodes_count; ni++) {
 		cgltf_node* n = &g->nodes[ni];
-		Node& nd = gModel.nodes[ni];
+		Node& nd = M.nodes[ni];
 		nd.t[0] = nd.t[1] = nd.t[2] = 0.0f;
 		nd.r[0] = nd.r[1] = nd.r[2] = 0.0f; nd.r[3] = 1.0f;
 		nd.s[0] = nd.s[1] = nd.s[2] = 1.0f;
@@ -875,14 +951,31 @@ void buildModel(cgltf_data* g) {
 		if (n->has_rotation)    for (int k = 0; k < 4; k++) nd.r[k] = n->rotation[k];
 		if (n->has_scale)       for (int k = 0; k < 3; k++) nd.s[k] = n->scale[k];
 		nd.meshIndex = n->mesh ? (int)(n->mesh - g->meshes) : -1;
+		nd.skinIndex = n->skin ? (int)(n->skin - g->skins) : -1;
 		for (size_t c = 0; c < n->children_count; c++)
 			nd.children.push_back((int)(n->children[c] - g->nodes));
 	}
 
-	for (size_t ni = 0; ni < gModel.nodes.size(); ni++) {
-		Node& nd = gModel.nodes[ni];
+	M.skins.resize(g->skins_count);
+	for (size_t si = 0; si < g->skins_count; si++) {
+		cgltf_skin* sk = &g->skins[si];
+		Skin& S = M.skins[si];
+		S.joints.resize(sk->joints_count);
+		for (size_t j = 0; j < sk->joints_count; j++) S.joints[j] = (int)(sk->joints[j] - g->nodes);
+		S.inverseBind.assign(sk->joints_count * 16, 0.0f);
+		S.jointMatrices.assign(sk->joints_count * 16, 0.0f);
+		if (sk->inverse_bind_matrices) {
+			for (size_t j = 0; j < sk->joints_count; j++)
+				cgltf_accessor_read_float(sk->inverse_bind_matrices, j, &S.inverseBind[j * 16], 16);
+		} else {
+			for (size_t j = 0; j < sk->joints_count; j++) mat4_identity(&S.inverseBind[j * 16]);
+		}
+	}
+
+	for (size_t ni = 0; ni < M.nodes.size(); ni++) {
+		Node& nd = M.nodes[ni];
 		if (nd.meshIndex < 0) continue;
-		for (auto& prim : gModel.meshes[nd.meshIndex]) {
+		for (auto& prim : M.meshes[nd.meshIndex]) {
 			PrimInstance inst = {};
 			inst.prim = &prim;
 			WGPUBufferDescriptor ud = {};
@@ -910,16 +1003,23 @@ void buildModel(cgltf_data* g) {
 
 	cgltf_scene* scene = g->scene ? g->scene : (g->scenes_count ? &g->scenes[0] : nullptr);
 	if (scene) for (size_t i = 0; i < scene->nodes_count; i++)
-		gModel.rootNodes.push_back((int)(scene->nodes[i] - g->nodes));
+		M.rootNodes.push_back((int)(scene->nodes[i] - g->nodes));
 
-	mat4_identity(gModel.baseTransform);
-	mat4_translate(gModel.baseTransform, 0.0f, 0.0f, -2.0f);
-	mat4_rotate(gModel.baseTransform, PI / 2.0f, 0.0f, 1.0f, 0.0f);
-	mat4_scale(gModel.baseTransform, 0.4f, 0.4f, 0.4f);
+	mat4_identity(M.baseTransform);
+	mat4_translate(M.baseTransform, cfg.pos[0], cfg.pos[1], cfg.pos[2]);
+	mat4_rotate(M.baseTransform, cfg.rot[1], 0.0f, 1.0f, 0.0f);
+	mat4_rotate(M.baseTransform, cfg.rot[0], 1.0f, 0.0f, 0.0f);
+	mat4_rotate(M.baseTransform, cfg.rot[2], 0.0f, 0.0f, 1.0f);
+	mat4_scale(M.baseTransform, cfg.scale, cfg.scale, cfg.scale);
 
-	gModel.animDuration = 0.0f;
+	M.animDuration = 0.0f;
 	if (g->animations_count > 0) {
-		cgltf_animation* anim = &g->animations[0];
+		int chosen = 0;
+		if (cfg.animName && cfg.animName[0]) {
+			for (size_t a = 0; a < g->animations_count; a++)
+				if (g->animations[a].name && strcmp(g->animations[a].name, cfg.animName) == 0) { chosen = (int)a; break; }
+		}
+		cgltf_animation* anim = &g->animations[chosen];
 		for (size_t c = 0; c < anim->channels_count; c++) {
 			cgltf_animation_channel* ch = &anim->channels[c];
 			if (!ch->target_node || !ch->sampler) continue;
@@ -934,45 +1034,72 @@ void buildModel(cgltf_data* g) {
 			for (int k = 0; k < nk; k++) {
 				float tt = 0.0f; cgltf_accessor_read_float(in, k, &tt, 1);
 				ac.times[k] = tt;
-				if (tt > gModel.animDuration) gModel.animDuration = tt;
+				if (tt > M.animDuration) M.animDuration = tt;
 			}
 			ac.ncomp = (int)cgltf_num_components(out->type);
 			ac.values.resize((size_t)nk * ac.ncomp);
 			for (int k = 0; k < nk; k++)
 				cgltf_accessor_read_float(out, k, &ac.values[(size_t)k * ac.ncomp], ac.ncomp);
-			gModel.channels.push_back(ac);
+			M.channels.push_back(ac);
 		}
 	}
 
-	computeCamera();
-	gModel.ready = true;
-
+	M.ready = true;
 	cgltf_free(g);
-	gGltf = nullptr;
+	free(gLoad.binCopy);
+	gLoad.binCopy = nullptr;
+	gLoad.g = nullptr;
+
+	computeCameraAll();
+
+	if (gLoad.modelIndex + 1 < gNumConfigs) loadModelIndex(gLoad.modelIndex + 1);
 }
 
-void onImage(void* /*user*/, const unsigned char* data, int size) {
+void onImage(void* user, const unsigned char* data, int size) {
+	int imgIdx = (int)(intptr_t)user;
 	if (data) {
 		int w, h, comp;
 		unsigned char* px = stbi_load_from_memory(data, size, &w, &h, &comp, 4);
-		if (px) { gTruckTexView = createTexture2D(px, w, h); stbi_image_free(px); }
+		if (px) { gLoad.imageViews[imgIdx] = createTexture2D(px, w, h); stbi_image_free(px); }
 	}
-	buildModel(gGltf);
+	gLoad.loaded++;
+	if (gLoad.loaded >= (int)gLoad.needed.size()) buildCurrentModel();
 }
 
 void onBin(void* /*user*/, const unsigned char* data, int size) {
 	if (!data) { printf("bin fetch failed\n"); return; }
-	gBinCopy = (unsigned char*)malloc(size);
-	memcpy(gBinCopy, data, size);
-	gGltf->buffers[0].data = gBinCopy;
-	gGltf->buffers[0].size = size;
-	if (gGltf->images_count > 0 && gGltf->images[0].uri) {
-		char imgUrl[512];
-		snprintf(imgUrl, sizeof(imgUrl), "%s%s", gBaseUrl, gGltf->images[0].uri);
-		fetchURL(imgUrl, onImage, nullptr);
-	} else {
-		buildModel(gGltf);
+	cgltf_data* g = gLoad.g;
+	gLoad.binCopy = (unsigned char*)malloc(size);
+	memcpy(gLoad.binCopy, data, size);
+	g->buffers[0].data = gLoad.binCopy;
+	g->buffers[0].size = size;
+
+	// Collect the unique base-color image indices that need fetching.
+	gLoad.imageViews.assign(g->images_count, nullptr);
+	gLoad.needed.clear();
+	std::vector<char> mark(g->images_count, 0);
+	for (size_t mi = 0; mi < g->meshes_count; mi++)
+		for (size_t pi = 0; pi < g->meshes[mi].primitives_count; pi++) {
+			cgltf_material* mat = g->meshes[mi].primitives[pi].material;
+			if (mat && mat->has_pbr_metallic_roughness) {
+				cgltf_texture* tx = mat->pbr_metallic_roughness.base_color_texture.texture;
+				if (tx && tx->image) {
+					int idx = (int)(tx->image - g->images);
+					if (idx >= 0 && idx < (int)g->images_count && !mark[idx]) { mark[idx] = 1; gLoad.needed.push_back(idx); }
+				}
+			}
+		}
+
+	gLoad.loaded = 0;
+	if (gLoad.needed.empty()) { buildCurrentModel(); return; }
+	for (int idx : gLoad.needed) {
+		const char* uri = g->images[idx].uri;
+		if (!uri) { gLoad.loaded++; continue; }
+		char imgUrl[600];
+		snprintf(imgUrl, sizeof(imgUrl), "%s%s", gLoad.baseUrl, uri);
+		fetchURL(imgUrl, onImage, (void*)(intptr_t)idx);
 	}
+	if (gLoad.loaded >= (int)gLoad.needed.size()) buildCurrentModel(); // all uris were null
 }
 
 void onGltf(void* /*user*/, const unsigned char* data, int size) {
@@ -982,70 +1109,175 @@ void onGltf(void* /*user*/, const unsigned char* data, int size) {
 	if (cgltf_parse(&opt, data, size, &g) != cgltf_result_success) {
 		printf("gltf parse failed\n"); return;
 	}
-	gGltf = g;
+	gLoad.g = g;
 	const char* binUri = (g->buffers_count > 0) ? g->buffers[0].uri : nullptr;
 	if (!binUri) { printf("no bin uri\n"); return; }
-	char binUrl[512];
-	snprintf(binUrl, sizeof(binUrl), "%s%s", gBaseUrl, binUri);
+	char binUrl[600];
+	snprintf(binUrl, sizeof(binUrl), "%s%s", gLoad.baseUrl, binUri);
 	fetchURL(binUrl, onBin, nullptr);
 }
 
-void loadModel() {
-	const char* url = "https://cx20.github.io/gltf-test/sampleModels/CesiumMilkTruck/glTF/CesiumMilkTruck.gltf";
+void loadModelIndex(int i) {
+	gLoad.modelIndex = i;
+	gLoad.g = nullptr;
+	gLoad.binCopy = nullptr;
+	gLoad.loaded = 0;
+	gLoad.imageViews.clear();
+	gLoad.needed.clear();
+	const char* url = gConfigs[i].url;
 	const char* slash = strrchr(url, '/');
 	int n = slash ? (int)(slash - url + 1) : 0;
-	memcpy(gBaseUrl, url, n);
-	gBaseUrl[n] = '\0';
+	memcpy(gLoad.baseUrl, url, n);
+	gLoad.baseUrl[n] = '\0';
 	fetchURL(url, onGltf, nullptr);
 }
 
+void loadModels() {
+	gModels.resize(gNumConfigs);
+	loadModelIndex(0);
+}
+
 void drawModel(WGPURenderPassEncoder pass, const float* view, const float* projection, float time) {
-	if (!gModel.ready) return;
-	updateAnimation(time);
-	for (int root : gModel.rootNodes) updateHierarchy(root, gModel.baseTransform);
+	bool anyReady = false;
+	for (auto& m : gModels) if (m.ready) { anyReady = true; break; }
+	if (!anyReady) return;
 
 	wgpuRenderPassEncoderSetPipeline(pass, mainPipeline);
-	for (size_t ni = 0; ni < gModel.nodes.size(); ni++) {
-		Node& nd = gModel.nodes[ni];
-		if (nd.meshIndex < 0) continue;
-		for (auto& inst : nd.instances) {
-			Primitive* prim = inst.prim;
-			float modelMatrix[16];
-			if (prim->hasSkinning) mat4_identity(modelMatrix);
-			else memcpy(modelMatrix, nd.world, sizeof(modelMatrix));
-			float invM[16], normalMatrix[16];
-			mat4_invert(invM, modelMatrix);
-			mat4_transpose(normalMatrix, invM);
+	for (auto& M : gModels) {
+		if (!M.ready) continue;
+		updateAnimation(M, time);
+		for (int root : M.rootNodes) updateHierarchy(M, root, M.baseTransform);
+		updateSkins(M);
+		for (size_t ni = 0; ni < M.nodes.size(); ni++) {
+			Node& nd = M.nodes[ni];
+			if (nd.meshIndex < 0) continue;
+			Skin* nodeSkin = (nd.skinIndex >= 0 && nd.skinIndex < (int)M.skins.size()) ? &M.skins[nd.skinIndex] : nullptr;
+			for (auto& inst : nd.instances) {
+				Primitive* prim = inst.prim;
+				bool skinned = prim->hasSkinning && nodeSkin;
+				float modelMatrix[16];
+				if (skinned) mat4_identity(modelMatrix);
+				else memcpy(modelMatrix, nd.world, sizeof(modelMatrix));
+				float invM[16], normalMatrix[16];
+				mat4_invert(invM, modelMatrix);
+				mat4_transpose(normalMatrix, invM);
 
-			unsigned char buf[304];
-			float* f = (float*)buf;
-			memcpy(f + 0,  modelMatrix, 64);
-			memcpy(f + 16, view, 64);
-			memcpy(f + 32, projection, 64);
-			memcpy(f + 48, normalMatrix, 64);
-			f[64] = 1.0f; f[65] = 1.0f; f[66] = 1.0f; f[67] = 0.0f;
-			f[68] = prim->baseColor[0]; f[69] = prim->baseColor[1];
-			f[70] = prim->baseColor[2]; f[71] = prim->baseColor[3];
-			uint32_t* u = (uint32_t*)buf;
-			u[72] = prim->hasSkinning ? 1u : 0u;
-			u[73] = prim->hasTexture ? 1u : 0u;
-			u[74] = prim->hasNormals ? 1u : 0u;
-			u[75] = 0u;
-			wgpuQueueWriteBuffer(queue, inst.uniformBuf, 0, buf, 304);
+				unsigned char buf[304];
+				float* f = (float*)buf;
+				memcpy(f + 0,  modelMatrix, 64);
+				memcpy(f + 16, view, 64);
+				memcpy(f + 32, projection, 64);
+				memcpy(f + 48, normalMatrix, 64);
+				f[64] = 1.0f; f[65] = 1.0f; f[66] = 1.0f; f[67] = 0.0f;
+				f[68] = prim->baseColor[0]; f[69] = prim->baseColor[1];
+				f[70] = prim->baseColor[2]; f[71] = prim->baseColor[3];
+				uint32_t* u = (uint32_t*)buf;
+				u[72] = skinned ? 1u : 0u;
+				u[73] = prim->hasTexture ? 1u : 0u;
+				u[74] = prim->hasNormals ? 1u : 0u;
+				u[75] = 0u;
+				wgpuQueueWriteBuffer(queue, inst.uniformBuf, 0, buf, 304);
 
-			wgpuRenderPassEncoderSetBindGroup(pass, 0, inst.bindGroup, 0, nullptr);
-			wgpuRenderPassEncoderSetVertexBuffer(pass, 0, prim->posBuf, 0, WGPU_WHOLE_SIZE);
-			wgpuRenderPassEncoderSetVertexBuffer(pass, 1, prim->normalBuf, 0, WGPU_WHOLE_SIZE);
-			wgpuRenderPassEncoderSetVertexBuffer(pass, 2, prim->uvBuf, 0, WGPU_WHOLE_SIZE);
-			wgpuRenderPassEncoderSetVertexBuffer(pass, 3, prim->jointsBuf, 0, WGPU_WHOLE_SIZE);
-			wgpuRenderPassEncoderSetVertexBuffer(pass, 4, prim->weightsBuf, 0, WGPU_WHOLE_SIZE);
-			if (prim->hasIndices) {
-				wgpuRenderPassEncoderSetIndexBuffer(pass, prim->indexBuf, WGPUIndexFormat_Uint32, 0, WGPU_WHOLE_SIZE);
-				wgpuRenderPassEncoderDrawIndexed(pass, prim->count, 1, 0, 0, 0);
-			} else {
-				wgpuRenderPassEncoderDraw(pass, prim->count, 1, 0, 0);
+				if (skinned) {
+					int nj = (int)nodeSkin->joints.size();
+					if (nj > MAX_JOINTS) nj = MAX_JOINTS;
+					wgpuQueueWriteBuffer(queue, inst.jointBuf, 0, nodeSkin->jointMatrices.data(), (size_t)nj * 64);
+				}
+
+				wgpuRenderPassEncoderSetBindGroup(pass, 0, inst.bindGroup, 0, nullptr);
+				wgpuRenderPassEncoderSetVertexBuffer(pass, 0, prim->posBuf, 0, WGPU_WHOLE_SIZE);
+				wgpuRenderPassEncoderSetVertexBuffer(pass, 1, prim->normalBuf, 0, WGPU_WHOLE_SIZE);
+				wgpuRenderPassEncoderSetVertexBuffer(pass, 2, prim->uvBuf, 0, WGPU_WHOLE_SIZE);
+				wgpuRenderPassEncoderSetVertexBuffer(pass, 3, prim->jointsBuf, 0, WGPU_WHOLE_SIZE);
+				wgpuRenderPassEncoderSetVertexBuffer(pass, 4, prim->weightsBuf, 0, WGPU_WHOLE_SIZE);
+				if (prim->hasIndices) {
+					wgpuRenderPassEncoderSetIndexBuffer(pass, prim->indexBuf, WGPUIndexFormat_Uint32, 0, WGPU_WHOLE_SIZE);
+					wgpuRenderPassEncoderDrawIndexed(pass, prim->count, 1, 0, 0, 0);
+				} else {
+					wgpuRenderPassEncoderDraw(pass, prim->count, 1, 0, 0);
+				}
 			}
 		}
+	}
+}
+
+void createGroundTracks() {
+	const float width = 100.0f, height = 0.1f;
+	float positions[] = {
+		-width / 2, 0, 0,   width / 2, 0, 0,   width / 2, 0, height,   -width / 2, 0, height
+	};
+	float normals[]  = { 0,1,0, 0,1,0, 0,1,0, 0,1,0 };
+	float uvs[]      = { 0,0, 1,0, 1,1, 0,1 };
+	uint32_t indices[] = { 0,1,2, 0,2,3 };
+	uint32_t joints[16] = {0};
+	float weights[16] = {0};
+	float trackZ[2] = { -1.6f, -2.35f };
+
+	for (int i = 0; i < 2; i++) {
+		GroundTrack t = {};
+		t.position[0] = -49.5f; t.position[1] = 0.0f; t.position[2] = trackZ[i];
+		t.color[0] = t.color[1] = t.color[2] = t.color[3] = 1.0f;
+		t.posBuf     = createDataBuffer(positions, sizeof(positions), WGPUBufferUsage_Vertex);
+		t.normalBuf  = createDataBuffer(normals,   sizeof(normals),   WGPUBufferUsage_Vertex);
+		t.uvBuf      = createDataBuffer(uvs,       sizeof(uvs),       WGPUBufferUsage_Vertex);
+		t.jointsBuf  = createDataBuffer(joints,    sizeof(joints),    WGPUBufferUsage_Vertex);
+		t.weightsBuf = createDataBuffer(weights,   sizeof(weights),   WGPUBufferUsage_Vertex);
+		t.indexBuf   = createDataBuffer(indices,   sizeof(indices),   WGPUBufferUsage_Index);
+
+		WGPUBufferDescriptor ud = {};
+		ud.usage = WGPUBufferUsage_Uniform | WGPUBufferUsage_CopyDst;
+		ud.size = 304;
+		t.uniformBuf = wgpuDeviceCreateBuffer(device, &ud);
+		WGPUBufferDescriptor jd = {};
+		jd.usage = WGPUBufferUsage_Storage | WGPUBufferUsage_CopyDst;
+		jd.size = MAX_JOINTS * 64;
+		t.jointBuf = wgpuDeviceCreateBuffer(device, &jd);
+
+		WGPUBindGroupEntry e[4] = {};
+		e[0].binding = 0; e[0].buffer = t.uniformBuf; e[0].size = 304;
+		e[1].binding = 1; e[1].buffer = t.jointBuf; e[1].size = MAX_JOINTS * 64;
+		e[2].binding = 2; e[2].sampler = gSampler;
+		e[3].binding = 3; e[3].textureView = gDefaultTexView;
+		WGPUBindGroupDescriptor bgd = {};
+		bgd.layout = wgpuRenderPipelineGetBindGroupLayout(mainPipeline, 0);
+		bgd.entryCount = 4;
+		bgd.entries = e;
+		t.bindGroup = wgpuDeviceCreateBindGroup(device, &bgd);
+		gGroundTracks.push_back(t);
+	}
+}
+
+void drawGroundTracks(WGPURenderPassEncoder pass, const float* view, const float* projection) {
+	if (gGroundTracks.empty()) return;
+	wgpuRenderPassEncoderSetPipeline(pass, mainPipeline);
+	for (auto& t : gGroundTracks) {
+		float modelMatrix[16];
+		mat4_identity(modelMatrix);
+		mat4_translate(modelMatrix, t.position[0], t.position[1], t.position[2]);
+		float invM[16], normalMatrix[16];
+		mat4_invert(invM, modelMatrix);
+		mat4_transpose(normalMatrix, invM);
+
+		unsigned char buf[304];
+		float* f = (float*)buf;
+		memcpy(f + 0,  modelMatrix, 64);
+		memcpy(f + 16, view, 64);
+		memcpy(f + 32, projection, 64);
+		memcpy(f + 48, normalMatrix, 64);
+		f[64] = 1.0f; f[65] = 1.0f; f[66] = 1.0f; f[67] = 0.0f;
+		f[68] = t.color[0]; f[69] = t.color[1]; f[70] = t.color[2]; f[71] = t.color[3];
+		uint32_t* u = (uint32_t*)buf;
+		u[72] = 0u; u[73] = 0u; u[74] = 1u; u[75] = 0u;
+		wgpuQueueWriteBuffer(queue, t.uniformBuf, 0, buf, 304);
+
+		wgpuRenderPassEncoderSetBindGroup(pass, 0, t.bindGroup, 0, nullptr);
+		wgpuRenderPassEncoderSetVertexBuffer(pass, 0, t.posBuf, 0, WGPU_WHOLE_SIZE);
+		wgpuRenderPassEncoderSetVertexBuffer(pass, 1, t.normalBuf, 0, WGPU_WHOLE_SIZE);
+		wgpuRenderPassEncoderSetVertexBuffer(pass, 2, t.uvBuf, 0, WGPU_WHOLE_SIZE);
+		wgpuRenderPassEncoderSetVertexBuffer(pass, 3, t.jointsBuf, 0, WGPU_WHOLE_SIZE);
+		wgpuRenderPassEncoderSetVertexBuffer(pass, 4, t.weightsBuf, 0, WGPU_WHOLE_SIZE);
+		wgpuRenderPassEncoderSetIndexBuffer(pass, t.indexBuf, WGPUIndexFormat_Uint32, 0, WGPU_WHOLE_SIZE);
+		wgpuRenderPassEncoderDrawIndexed(pass, 6, 1, 0, 0, 0);
 	}
 }
 
@@ -1118,6 +1350,7 @@ bool redraw() {
 		wgpuRenderPassEncoderDraw(pass, 36, 1, 0, 0);
 	}
 
+	drawGroundTracks(pass, view, projection);
 	drawModel(pass, view, projection, time);
 
 	wgpuRenderPassEncoderEnd(pass);
@@ -1140,8 +1373,9 @@ void start() {
 	createSurface();
 	createSkyboxPipeline();
 	createMainPipeline();
+	createGroundTracks();
 	loadSkybox();
-	loadModel();
+	loadModels();
 	emscripten_request_animation_frame_loop(em_redraw, nullptr);
 }
 
