@@ -12,11 +12,15 @@ import {
     loadGltf,
     loadSkybox,
     onBeforeRender,
+    parseNodeParticleSetFromSnippet,
     playAnimation,
+    registerNodeParticleSet,
     registerScene,
     startEngine,
     stopAnimation,
 } from "@babylonjs/lite";
+
+import { createDustNpe } from "./dust-npe.js";
 
 const ENV_URL = "https://assets.babylonjs.com/core/environments/environmentSpecular.env";
 const BRDF_URL = "https://raw.githubusercontent.com/BabylonJS/Babylon-Lite/master/lab/public/brdf-lut.png";
@@ -27,6 +31,15 @@ const CAM_BETA = Math.acos(5 / CAM_RADIUS);
 
 // Quaternion for 90 degree rotation around Y axis
 const Q_Y90 = { x: 0, y: Math.sin(Math.PI / 4), z: 0, w: Math.cos(Math.PI / 4) };
+
+// Tire dust emitters, matching the four emitter meshes in examples/babylonjs/complex.
+// The rear wheels kick up more dust (maxEmitPower 0.5) than the front (0.2).
+const DUST_EMITTERS = [
+    { position: { x: -0.8, y: 0.1, z: 1.6 }, maxEmitPower: 0.5 }, // right back
+    { position: { x: -0.8, y: 0.1, z: 2.35 }, maxEmitPower: 0.5 }, // left back
+    { position: { x: 0.3, y: 0.1, z: 1.6 }, maxEmitPower: 0.2 }, // right front
+    { position: { x: 0.3, y: 0.1, z: 2.35 }, maxEmitPower: 0.2 }, // left front
+];
 
 async function init() {
     const canvas = document.querySelector("#c");
@@ -94,6 +107,19 @@ async function init() {
     });
 
     await loadSkybox(scene, "https://playground.babylonjs.com/textures/skybox", ".jpg");
+
+    // Tire dust: one Node Particle system per wheel. Babylon Lite has no classic
+    // ParticleSystem, so each dust cloud is a Node Particle graph (see dust-npe.js).
+    // registerNodeParticleSet renders it as camera-facing billboards and drives the
+    // per-frame simulation automatically.
+    for (const emitter of DUST_EMITTERS) {
+        const set = await parseNodeParticleSetFromSnippet(engine, scene, "", {
+            json: createDustNpe(emitter.maxEmitPower),
+            emitter: emitter.position,
+            textureBaseUrl: "",
+        });
+        registerNodeParticleSet(scene, set);
+    }
 
     onBeforeRender(scene, () => { cam.alpha -= 0.005; });
 
