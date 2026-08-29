@@ -7,7 +7,7 @@ async function init() {
         const scene = new BABYLON.Scene(engine);
         const camera = new BABYLON.FreeCamera("camera", new BABYLON.Vector3(0, 0, -2.4), scene);
         scene.clearColor = new BABYLON.Color3(1, 1, 1);
-        const square = new BABYLON.Mesh.CreatePlane('square', 1.0, scene);
+        const square = BABYLON.Mesh.CreatePlane('square', 1.0, scene);
         const colors = [
             0.0, 0.0, 1.0, 1.0,
             1.0, 1.0, 0.0, 1.0,
